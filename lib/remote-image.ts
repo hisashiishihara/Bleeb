@@ -39,7 +39,7 @@ export function validateImageSource(value:string,allowed:ImageHostPolicy,maxUrlL
 }
 export async function downloadImage(
  sourceUrl:string,allowlist:ImageHostPolicy,fetcher:typeof fetch=fetch,
- options:{maxUrlLength?:number;expectedType?:string}={}
+ options:{maxUrlLength?:number;expectedType?:string;allowUnknownMIME?:boolean}={}
 ):Promise<{image:File;final_host:string}> {
  let url=validateImageSource(sourceUrl,allowlist,options.maxUrlLength);
  for(let hop=0;hop<=MAX_HOPS;hop++){
@@ -65,10 +65,13 @@ export async function downloadImage(
   }
   const declared=response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
   const expected=options.expectedType;
-  // Host-resolved ChatGPT files may be delivered as octet-stream, so use a
-  // valid declared image MIME only in that case and still verify file bytes.
-  const mime=(!declared||declared==="application/octet-stream") && expected ? expected : declared;
-  if(!validMediaType(mime)||!IMAGE_TYPES.some(type=>type===mime)||
+  // ChatGPT fileParams may use application/octet-stream for real PNG/JPEG.
+  // Only the trusted fileParams path may sniff an untyped response; the
+  // arbitrary HTTPS image import continues to require an image MIME.
+  const generic=!declared || declared==="application/octet-stream";
+  const sniff=options.allowUnknownMIME===true && generic && expected===undefined;
+  const mime=generic && expected ? expected : declared;
+  if((!sniff && (!validMediaType(mime)||!IMAGE_TYPES.some(type=>type===mime)))||
     (expected!==undefined && mime!==expected)){
    await response.body.cancel();
    throw new DiaryError("invalid_media","URL must return an allowed image MIME type",415);
@@ -97,10 +100,12 @@ export async function downloadImage(
   if(total===0)throw new DiaryError("invalid_media","Empty image",415);
   const data=new Uint8Array(total);
   let index=0;for(const chunk of chunks){data.set(chunk,index);index+=chunk.length;}
-  if(!matchesSignature(mime as MediaType,data))
+  const actualType=sniff ? IMAGE_TYPES.find(type=>matchesSignature(type,data)) : mime;
+  if(!validMediaType(actualType) || !IMAGE_TYPES.some(type=>type===actualType) ||
+    !matchesSignature(actualType as MediaType,data))
    throw new DiaryError("invalid_media","Remote image signature does not match MIME type",415);
   const suffix:Record<string,string>={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"};
-  const image=new File([data],"imported-image."+suffix[mime],{type:mime});
+  const image=new File([data],"imported-image."+suffix[actualType],{type:actualType});
   return {image,final_host:url.hostname};
  }
  throw new DiaryError("too_many_redirects","Too many image redirects",422);
