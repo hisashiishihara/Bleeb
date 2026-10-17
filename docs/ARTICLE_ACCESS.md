@@ -9,11 +9,11 @@ Implemented 2026-10-17. This document supersedes the future-audience section of 
 | registered | yes | yes | yes | no |
 | public | yes | yes | yes | yes |
 
-Status and visibility are independent. All new and migrated entries default to owner. Drafts and all historical or newly saved revisions are accessible only through owner APIs/archive. Reader queries always join published_revision, never latest_revision. Owner readers can see published owner articles in the regular reader view; all drafts and history remain accessible in the archive.
+Status and visibility are independent. All new and migrated entries default to owner. **Only entries with status=published have reader permalinks; these render latest_revision.** A saved edit or hero change to an already-published article becomes immediately visible to its existing authorized audience, without broadening visibility. Drafts remain hidden from regular reader routes, even to the owner, and their revision history is available only through owner APIs/archive. The legacy published_revision column records the last explicit publication action and is not the reader-visible content selector. Owner readers can see published owner-only articles; anonymous readers cannot.
 
 ## Publishing
 
-publish_entry accepts visibility=owner|paid|registered|public and a saved revision. Broader access requires explicit owner intent. Omitted visibility retains the current audience for compatibility; it never broadens access. New request IDs are required for distinct publication operations. unpublish_entry resets status=draft, visibility=owner and published_revision=NULL without deleting history. The seven MCP tool names and existing required parameters are retained.
+publish_entry accepts visibility=owner|public and the **latest saved revision only**. For older text, create a newer revision based on the historical content. Broader access requires explicit owner intent. Omitted visibility retains the current audience for compatibility; it never broadens access. New request IDs are required for distinct publication operations. unpublish_entry resets status=draft, visibility=owner and published_revision=NULL without deleting history. The seven MCP tool names and existing required parameters are retained.
 
 ## Identity and registration
 
