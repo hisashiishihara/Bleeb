@@ -97,10 +97,10 @@ test("membership endpoints are inert, even for authenticated owner; owner APIs r
  }finally{sqlite.close();}
 });
 
-test("twelve MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
+test("thirteen MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
  const {sqlite}=fixture();
  try {
-  assert.equal(tools.length,12);
+  assert.equal(tools.length,13);
   assert.deepEqual(tools.find(t=>t.name==="publish_entry").inputSchema.properties.visibility.enum,["owner","public"]);
   const call=async(name,args,headers=ownerHeaders)=>{
    const response=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers,body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:args}})}));
@@ -247,6 +247,68 @@ test("MCP Base64 uploads create private R2 images and unpublished hero revisions
   assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM media_assets").first()).n,2);
  }finally{
   sqlite.close();
+  globalThis.__diaryTestEnv.MEDIA=previousMedia;
+ }
+});
+
+test("ChatGPT-generated fileParams image uploads via signed URL and remains unpublished",async()=>{
+ const {db,sqlite}=fixture();
+ const oldFetch=globalThis.fetch;
+ const previousHosts=globalThis.__diaryTestEnv.AI_DIARY_CHATGPT_FILE_HOSTS;
+ const previousMedia=globalThis.__diaryTestEnv.MEDIA;
+ const stored=new Map(),requests=[];
+ try {
+  globalThis.__diaryTestEnv.AI_DIARY_CHATGPT_FILE_HOSTS="files.oaiusercontent.com";
+  globalThis.__diaryTestEnv.MEDIA={
+   async put(key,value){stored.set(key,await value.arrayBuffer());},
+   async delete(key){stored.delete(key);},
+   async head(key){return stored.has(key)?{key}:null;}
+  };
+  const raw=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0]);
+  globalThis.fetch=async (url,options)=>{
+   requests.push({url,options});
+   return new Response(raw,{headers:{"Content-Type":"application/octet-stream"}});
+  };
+  const tool=tools.find(t=>t.name==="upload_chatgpt_image");
+  assert.deepEqual(tool?._meta?.["openai/fileParams"],["file"]);
+  assert.deepEqual(tool?.inputSchema.properties.file.required,["download_url","file_id"]);
+  assert.deepEqual(Object.keys(tool?.inputSchema.properties.file.properties).sort(),
+   ["download_url","file_id","mime_type","file_name"].sort());
+  const entry=await store.saveDraft(db,{title:"FileParams test",body_md:"Original published",request_id:req()});
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"public",request_id:req()});
+  const file={download_url:"https://files.oaiusercontent.com/transfer.png?temporary=secret",file_id:"file_test",mime_type:"image/png",file_name:"generated.png"};
+  const args={entry_id:entry.entry_id,expected_revision:1,file,usage:"hero",alt_text:"Generated PNG",request_id:req()};
+  const direct=await store.uploadChatGPTImage(db,args);
+  assert.equal(direct.revision,2);
+  assert.equal(direct.published_revision,1);
+  assert.equal(direct.hero_alt_text,"Generated PNG");
+  assert.equal(stored.size,1);
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].options.credentials,"omit");
+  assert.equal(requests[0].options.redirect,"manual");
+  assert.equal(requests[0].options.referrerPolicy,"no-referrer");
+  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,null);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id,revision:2})).revision.hero_media_id,direct.media_id);
+  assert.equal((await store.uploadChatGPTImage(db,args)).media_id,direct.media_id);
+  assert.equal(requests.length,1);
+  // No unvalidated URL may be fetched, even with valid caller owner credentials.
+  await assert.rejects(store.uploadChatGPTImage(db,{...args,file:{...file,download_url:"https://evil.example.com/x.png"},expected_revision:2,request_id:req()}),
+   e=>e.code==="image_host_not_allowed");
+  assert.equal(requests.length,1);
+  await assert.rejects(store.uploadChatGPTImage(db,{...args,file:{...file,download_url:"http://files.oaiusercontent.com/x.png"},expected_revision:2,request_id:req()}),
+   e=>e.code==="invalid_image_url");
+  assert.equal(requests.length,1);
+  // Explicitly verify actual JSON-RPC route preserves owner guard.
+  const rpcBody=JSON.stringify({jsonrpc:"2.0",id:3,method:"tools/call",
+   params:{name:"upload_chatgpt_image",arguments:{...args,expected_revision:2,request_id:req()}}});
+  const anonymous=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",body:rpcBody}));
+  assert.equal((await anonymous.json()).result.isError,true);
+  assert.equal(requests.length,1);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM media_assets").first()).n,1);
+ }finally{
+  sqlite.close();
+  globalThis.fetch=oldFetch;
+  globalThis.__diaryTestEnv.AI_DIARY_CHATGPT_FILE_HOSTS=previousHosts;
   globalThis.__diaryTestEnv.MEDIA=previousMedia;
  }
 });
