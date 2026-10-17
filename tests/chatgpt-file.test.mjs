@@ -78,3 +78,23 @@ test("octet-stream fileParams rejects nonimages and mismatched declared MIME",as
  await assert.rejects(downloadChatGPTImage({...file(),mime_type:"image/jpeg"},undefined,
   async()=>new Response(bytes,{headers:{"Content-Type":"application/octet-stream"}})),{code:"invalid_media"});
 });
+
+test("blocked native transfer exposes only denied hostname, never signed token",async()=>{
+ const url="https://unexpected.example.com/very-secret.png?token=secret-not-for-logs";
+ await assert.rejects(downloadChatGPTImage(file(url),undefined,async()=>{throw Error("must not fetch")}),
+  error=>{
+   assert.equal(error.code,"image_host_not_allowed");
+   assert.match(error.message,/unexpected\\.example\\.com/);
+   assert.doesNotMatch(error.message,/secret|token=|very-secret\\.png/);
+   return true;
+  });
+ const redirecting=async()=>new Response(null,{status:302,
+  headers:{Location:"https://redirected.example.com/image.png?credential=hidden"}});
+ await assert.rejects(downloadChatGPTImage(file(),undefined,redirecting),
+  error=>{
+   assert.equal(error.code,"image_host_not_allowed");
+   assert.match(error.message,/redirected\\.example\\.com/);
+   assert.doesNotMatch(error.message,/hidden|credential/);
+   return true;
+  });
+});
