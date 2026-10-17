@@ -132,6 +132,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    </p>
    <div className="owner-tabs"><a href="/owner/archive">← アーカイブ</a>
      {initial.id&&<a href={"/owner/archive/"+encodeURIComponent(initial.id)}>履歴を表示</a>}
+     {initial.id&&<a href={"/owner/media?entry_id="+encodeURIComponent(initial.id)}>画像・動画を管理／削除</a>}
    </div>
    <form className="editor-form" onSubmit={e=>{e.preventDefault();void save();}}>
      <label>タイトル<input value={title} onChange={e=>update(setTitle)(e.target.value)} maxLength={200} required/></label>

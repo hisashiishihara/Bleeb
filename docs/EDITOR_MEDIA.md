@@ -3,8 +3,9 @@
 ## Purpose
 
 The owner can edit existing aiDiary articles directly in a browser without
-ChatGPT, save revisions, and upload local images/videos. The existing seven
-MCP tools are unchanged and use the same revision model.
+ChatGPT, save revisions, and upload local images/videos. The original seven MCP tools remain compatible and use the same revision model.
+An eighth owner-only tool, `delete_media`, provides explicit irreversible
+media deletion by ChatGPT after its Site-hosted registration is refreshed.
 
 ## Routes
 
@@ -17,6 +18,10 @@ MCP tools are unchanged and use the same revision model.
 - `POST /api/owner/unpublish_entry`: explicit withdrawal.
 - `POST /api/owner/media`: owner-only multipart upload, requires matching
   same-origin Origin; accepts `file` and an existing `entry_id`.
+- `DELETE /api/owner/media/{id}`: owner-only same-origin permanent deletion,
+  also available from `/owner/media?entry_id={entry_id}`. Deletion requires
+  first removing the media reference from the selected published revision.
+  Original revision Markdown records are deliberately retained.
 - `GET|HEAD /media/{id}`: streams from private R2 after server-side authorization
   and supports a single HTTP byte range for MP4/WebM playback.
 

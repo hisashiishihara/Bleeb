@@ -4,6 +4,8 @@ import { makeExport, type ExportEntry, type ExportRevision } from "./export";
 
 type Entry = ExportEntry;
 import { visibility } from "./access";
+import { deleteMedia } from "./media-deletion";
+import { bucket } from "./media-store";
 export { readableEntries as publicEntries, readableEntry as publicEntry } from "./reader-store";
 type Revision = ExportRevision;
 type MutationRow = { operation: string; response_json: string };
@@ -200,6 +202,11 @@ export async function dispatch(db: DB, action: string, args: unknown) {
     case "publish_entry": return publishEntry(db,args);
     case "unpublish_entry": return unpublishEntry(db,args);
     case "export_entries": return exportEntries(db,args);
+    case "delete_media": {
+      const input=args as Record<string,unknown>;
+      return deleteMedia(db,bucket(),typeof input.media_id==="string"?input.media_id:"",
+        typeof input.entry_id==="string"?input.entry_id:undefined);
+    }
     default: throw new DiaryError("not_found", "Unknown operation", 404);
   }
 }

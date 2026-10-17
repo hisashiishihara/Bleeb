@@ -97,10 +97,10 @@ test("membership endpoints are inert, even for authenticated owner; owner APIs r
  }finally{sqlite.close();}
 });
 
-test("seven MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
+test("eight MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
  const {sqlite}=fixture();
  try {
-  assert.equal(tools.length,7);
+  assert.equal(tools.length,8);
   assert.deepEqual(tools.find(t=>t.name==="publish_entry").inputSchema.properties.visibility.enum,["owner","public"]);
   const call=async(name,args,headers=ownerHeaders)=>{
    const response=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers,body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:args}})}));

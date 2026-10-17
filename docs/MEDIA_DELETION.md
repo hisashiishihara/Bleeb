@@ -1,0 +1,61 @@
+# Private R2 media deletion — 2026-10-17
+
+## What deletion means
+
+The owner explicitly requests a single media UUID. The application permanently
+deletes that R2 object, verifies it is absent, and removes its D1 `media_assets`
+record. This is **not** the same as removing Markdown text from an article.
+
+Past revision records are append-only and remain intact. Any old revision that
+contained a link to the deleted media will still have that text, but the media URL
+returns 404. To protect currently displayed articles, the deletion action refuses
+a file referenced by the selected published revision, regardless of visibility.
+
+## Interfaces
+
+- Browser: `/owner/media?entry_id=<entry id>`. The editor links to this page.
+  It displays owner-only media metadata and offers an explicit, confirmed
+  irreversible deletion button.
+- Browser REST: `DELETE /api/owner/media/{media_id}`. Requires verified Sites
+  owner ID + email + server switch and exact same-origin Origin. This is not a
+  public endpoint and cannot be invoked merely by knowing a UUID.
+- ChatGPT: Site-hosted MCP tool `delete_media` with required `media_id` and
+  optional `entry_id` for an exact article guard. It passes through the
+  existing verified owner authentication gate. It is never called
+  automatically or inferred from a vague reference.
+
+If the owner wants to remove a file in an existing published article, first
+save a revision without the Markdown reference and explicitly select/publish
+that revision. Then perform file deletion.
+
+The R2 operation precedes D1 deletion so errors never discard the only stored
+object key before bytes are removed. A failed delete leaves D1 metadata intact
+for a retry. The R2 object is checked absent after `delete` before the metadata
+record is removed. If it was already deleted, a retry completes the cleanup.
+
+## Immediate cleanup requested by owner
+
+- Specific file: `793.jpg`
+- Media UUID: `0039655a-516c-4416-abba-9e570d0e4a31`
+- Article: `37799b00-3526-4083-ae3b-66b89aaf4281`
+- The owner explicitly requested permanent file deletion.
+- ChatGPT already saved revision 4 without the Markdown reference and published
+  it with `owner` visibility, so the active published version no longer
+  references this object.
+- **R2 deletion remains pending** until the Sites update is deployed and the
+  new owner-only browser/MCP deletion action succeeds.
+- Do not delete any other media, change the article's visibility to public,
+  or rewrite earlier revisions.
+- After deployment, use the new action with the UUID and article guard,
+  then confirm both R2 object absence and D1 row absence, with old media URL
+  returning 404 even for authenticated owner.
+
+## Deployment tests
+
+- Retain existing owner/public Sites policy, D1 rows and article history,
+  existing media upload/read behavior and the original seven MCP tools.
+- The eighth MCP tool must be explicitly registered/reconnected; updating
+  GitHub alone does not automatically update the connected plugin interface.
+- Validate 409 for media referenced by the current published revision;
+  verify same-origin and forged-header denial; verify unrelated assets untouched.
+- Do not claim permanent deletion if the R2 or D1 verification was not done.
