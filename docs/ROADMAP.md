@@ -1,385 +1,122 @@
-
 # aiDiary Roadmap
 
-## Product Goal
+**Revised:** 2026-10-17. This roadmap replaces the previous Python CGI/Apache delivery plan.
 
-Build the smallest practical tool that lets an AI client turn a long conversation into durable public writing on an existing website.
+## Product success criterion
 
-The first release succeeds when a user can say:
+In an ordinary ChatGPT conversation, the author can say:
 
-> Turn this conversation into a draft, save it, revise it, and publish it.
+> Save this as a draft. Revise it. Publish it.
 
-The result must be stored as Markdown, published as static HTML, listed in archives and a feed, and served without a database or running application.
+The post appears at a public Site URL without manually moving Markdown files, running a local server, or redeploying frontend code. Draft content stays private and remains exportable as Markdown.
 
-## Phase 0 — Project Foundation
+## Phase 0 — Foundation and platform validation
 
-### Deliverables
+Deliverables:
+- Revised README, canonical requirements, design, roadmap (this change).
+- Confirm account can create/publish a Site and use D1.
+- Confirm the Site owner can create and connect a Site-hosted MCP plugin.
+- Check whether verified author identity is available to the MCP handler.
+- Choose a supported Site framework/build output after inspecting deployment constraints.
+- Decide whether author-only Site or public Site + private MCP tools is achievable without insecure workarounds.
 
-- `README.md`
-- `docs/REQUIREMENTS.md`
-- `docs/DESIGN.md`
-- `docs/ROADMAP.md`
-- `LICENSE` using BSD-3-Clause
-- contribution guide
-- minimal issue templates
-- initial architecture decision records
+Exit: core platform gates and any blockers are recorded; there is no assumption that separate features automatically compose safely.
 
-### Key decisions
+## Phase 1 — Site and database skeleton
 
-- Python 3.12+
-- Apache CGI as the primary deployment
-- Markdown as the source of truth
-- static HTML for all public reads
-- no database
-- no daemon
-- no built-in AI
-- no remote delete endpoint in MVP
+Deliverables:
+- Deploy a test Site at its default URL; do not configure a custom domain yet.
+- Create D1 tables for entries, immutable revisions, and idempotent requests.
+- Serve public home and article routes using only published revisions.
+- Test a sample published article and a private draft.
+- Prove that D1 content changes are visible without republishing site code.
 
-### Exit criteria
+Exit: read path verified from an anonymous browser; a draft cannot be retrieved publicly.
 
-- repository can be understood without reading implementation code
-- MVP scope and non-goals are explicit
-- BSD-3-Clause license is present
+## Phase 2 — ChatGPT editing integration (critical path)
 
-## Phase 1 — Local Markdown Publisher
+Deliverables:
+- Site-hosted MCP tools for save_draft, get_entry, list_entries, update_entry.
+- Publish Site as necessary to create/update the plugin; install/connect on the author's personal ChatGPT account.
+- Owner-only authorization, revision conflict protection, request IDs, and sanitized rendering.
+- Add explicit publish_entry and unpublish_entry operations.
 
-### Goals
+Exit: from a regular ChatGPT conversation, create, revise, publish, and unpublish one test entry; unauthorized writes and draft reads fail; no site-code redeployment needed for content publication.
 
-Prove Markdown storage and static publishing before adding HTTP or AI integration.
+## Phase 3 — Preservation and reliability
 
-### Features
+Deliverables:
+- Export Markdown with complete metadata and selected revisions.
+- Import/restore into a clean test D1 store; verify round-trip.
+- Cover interrupted/retried writes, stale update, slug collisions, XSS, and private-data leaks.
+- Document recovery, secrets, and operational limits.
+- Add BSD-3-Clause LICENSE file before release.
 
-- load configuration
-- create an entry from a local command
-- parse YAML front matter
-- render Markdown
-- generate article page
-- generate home page
-- generate year and month archives
-- generate tag archives
-- generate RSS or Atom
-- rebuild the full site
-- publish through staging and atomic activation
+Exit: a user can recover their work from portable files; tests cover privacy and publication invariants.
 
-### Suggested commands
+## Phase 4 — Usable public blog
 
-```text
-aidiary build
-aidiary new --date 2026-07-22 --title "Example"
-aidiary validate
-```
+Deliverables:
+- Responsive Japanese-first design, stable permalinks, site metadata.
+- Pagination and date archives.
+- Tags and simple search if needed.
+- RSS/Atom and canonical links.
+- Attach custom domain after successful PoC and DNS verification.
+- Document content ownership, disclosures, and public-launch checklist.
 
-### Exit criteria
+Exit: publicly readable personal blog with discoverable, stable articles and routine maintenance procedures.
 
-- sample site builds from only Markdown files
-- deleting generated HTML and rebuilding produces equivalent output
-- a failed build leaves the old site intact
-- no database or background service exists
+## Phase 5 — Conversation memory/knowledge (optional)
 
-## Phase 2 — CGI API
+Deliverables:
+- Owner-only context retrieval filtered by time, tag and topic.
+- Chronological idea development and rejected-alternative summaries derived from published/private notes with owner permission.
+- Optional cross-conversation source links and portable exports.
 
-### Goals
+Exit: generated summaries always link to and never silently rewrite primary entries.
 
-Expose the publisher safely through ordinary CGI.
+## Acceptance scenario to prioritize
 
-### Features
+1. Create a draft from ChatGPT based on a small **test** conversation.
+2. Verify the draft is invisible to an anonymous visitor and public APIs.
+3. Revise and confirm previous revision remains recoverable.
+4. Explicitly publish a revision; verify public URL and no frontend redeployment.
+5. Save a newer draft revision; verify published page still shows the old revision.
+6. Publish that new revision; verify new public content.
+7. Unpublish; verify all public read surfaces stop serving it.
+8. Export and restore; compare title, Markdown, timestamps, status and revisions.
+9. Attempt unauthorized and replayed tool calls; confirm safe rejection/idempotence.
 
-- CGI request parsing without the removed Python `cgi` module
-- method and path routing
-- JSON request and response handling
-- body size limits
-- safe error responses
-- Bearer authentication
-- create entry
-- get entry source
-- update entry
-- publish
-- unpublish
-- list entries
-- idempotency through `request_id`
-- optimistic concurrency using revision hashes
-- OpenAPI document
+Only then try publishing real notes.
 
-### Exit criteria
+## Scope guards
 
-- API can be exercised with `curl`
-- public reads remain pure static files
-- invalid tokens cannot modify content
-- path traversal and arbitrary filesystem access are impossible
-- publication remains atomic
+- No Python CGI, Apache deployment, long-running NUC worker, VPS, or hourly task.
+- No AI API call for public viewing. ChatGPT composes content as the author directs.
+- No generic CMS features, comments, social graph, payment infrastructure, or multi-author work in MVP.
+- Do not add an administrative SPA when conversational tooling meets the need.
+- No unconditional auto-publication of private notes.
+- Do not conflate deploying code with publishing content.
+- GitHub stores code and optional backups; it is not a per-post deployment trigger.
 
-## Phase 3 — ChatGPT Actions Integration
+## Known external dependencies
 
-### Goals
+- ChatGPT Sites availability and limitations may depend on plan/surface.
+- Site-hosted MCP plugin needs an owner publish step followed by installation and connection.
+- Owner authorization across the plugin and Site request boundaries **must be tested**; lack of a trusted identity source blocks the production design.
+- D1 storage/throughput, execution, cache, backup/export, and custom domain support are subject to platform limits.
+- This repository does not automatically deploy to Sites through git push; deployment must be explicitly verified.
 
-Make ChatGPT the editor and administration interface.
+## Milestones
 
-### Deliverables
+- v0.1: proof of authenticated conversation -> published D1 entry
+- v0.2: revision-safe editing, withdrawal, robust privacy tests
+- v0.3: Markdown export and restore
+- v0.4: feed, tags/search, custom domain
+- v1.0: stable schema/migration path, documented restore and operational support
 
-- example Custom GPT instructions
-- ChatGPT Actions-compatible OpenAPI example
-- setup documentation
-- safe workflow prompts
-- draft-first publishing behavior
-- examples for create, revise, rename, publish, unpublish, and context retrieval
+## Platform references
 
-### Exit criteria
-
-- an ordinary user can configure a custom GPT without modifying aiDiary code
-- ChatGPT can create, revise, and publish an entry
-- ChatGPT cannot delete files or edit configuration
-- secrets are not exposed to generated pages or logs
-
-## Phase 4 — Today's Referrers
-
-### Goals
-
-Restore the useful feedback loop of classic web diaries without building a social network.
-
-### Features
-
-- documented Apache log format
-- log parser
-- internal-referrer exclusion
-- bot filtering
-- per-entry, per-day aggregation
-- static JSON output
-- optional article display
-- manual rebuild command
-- optional cron example
-
-### Non-goals
-
-- user tracking
-- fingerprinting
-- ad attribution
-- invasive analytics
-- guaranteed search keywords
-
-### Exit criteria
-
-- external referrers appear for each article
-- missing logs do not break publishing
-- referrer collection remains independent from Markdown
-- public article loading does not require CGI execution
-
-## Phase 5 — Packaging and Portability
-
-### Goals
-
-Reduce installation friction for existing websites.
-
-### Features
-
-- `.pyz` distribution
-- tiny CGI launcher
-- example Apache configuration
-- installation checker
-- file permission diagnostics
-- example shared-hosting deployment
-- backup and restore guide
-- upgrade procedure with no content migration
-
-### Possible secondary targets
-
-- Nginx with `fcgiwrap`
-- lighttpd CGI
-- command-only static generation
-- direct Git publishing hook
-
-### Exit criteria
-
-- a fresh Apache host can install aiDiary by copying files and editing one config
-- no global `pip install` is required for packaged releases
-- upgrades never require importing content into a database
-
-## Phase 6 — Search and Context Export
-
-### Goals
-
-Make the diary useful as a bridge between separate AI conversations.
-
-### Features
-
-- static JSON search index
-- tag filtering
-- date filtering
-- context export endpoint
-- Markdown and JSON context formats
-- configurable output size
-- source links in exported context
-- chronological and reverse chronological modes
-
-### Exit criteria
-
-- a new AI conversation can retrieve relevant past entries by tag and date
-- context export does not require embeddings or a vector database
-- all indexes can be deleted and regenerated
-
-## Phase 7 — Thought Timeline
-
-### Goals
-
-Add a derived knowledge layer without turning aiDiary into a wiki or knowledge graph product.
-
-### Features
-
-- stable `topics` metadata
-- topic archive pages
-- chronological timeline generation
-- AI-assisted extraction of major decisions, changes in opinion, rejected alternatives, reasons for changes, and unresolved questions
-- current-state summaries
-- mandatory source-entry links
-- generation timestamps
-- manual review before publication
-
-### Data principle
-
-```text
-Diary entries       = primary evidence
-Tag and topic pages  = generated indexes
-Thought timelines    = generated interpretation
-Current summaries    = disposable AI output
-```
-
-### Exit criteria
-
-- users can see how an idea evolved over time
-- generated summaries never modify original entries
-- all knowledge-layer data can be regenerated from diary sources
-- contradictions are presented as changes, not silently resolved
-
-## Phase 8 — Open Web Feedback
-
-### Goals
-
-Support public reaction without becoming a centralized social platform.
-
-### Candidate features
-
-- Webmention receiving and display
-- outgoing Webmention
-- IndieWeb-compatible metadata
-- improved RSS or Atom discovery
-- optional lightweight reactions
-- backlinks between aiDiary sites
-- optional Search Console import
-
-### Explicit exclusions
-
-- central user accounts
-- global timeline
-- follower counts
-- ranking
-- recommendation algorithm
-- engagement optimization
-
-### Exit criteria
-
-- external responses can return to the author's own site
-- users remain owners of their domains and content
-- feedback features remain optional and removable
-
-## Phase 9 — Ecosystem, Only If Needed
-
-This phase should begin only after real external use demonstrates demand.
-
-Possible work:
-
-- additional themes
-- importers from tDiary, Markdown blogs, or Evernote exports
-- Rust implementation of selected performance-sensitive tools
-- PHP CGI-compatible implementation
-- migration tools
-- reusable library extraction
-- multi-language documentation
-
-Avoid creating:
-
-- a plugin marketplace
-- a hosted SaaS dependency
-- a database-backed enterprise edition
-- features added only to match general CMS products
-
-## Release Plan
-
-### v0.1.0
-
-- Markdown repository
-- static renderer
-- home, entry, archive, tag, and feed generation
-- local rebuild
-- BSD-3-Clause license
-
-### v0.2.0
-
-- CGI API
-- Bearer authentication
-- create, read, update, publish, unpublish
-- OpenAPI document
-
-### v0.3.0
-
-- ChatGPT Actions example
-- context export
-- packaged `.pyz`
-
-### v0.4.0
-
-- Today's Referrers
-- static referrer data
-- filtering and Apache examples
-
-### v0.5.0
-
-- static search
-- topic metadata
-- first Thought Timeline prototype
-
-### v1.0.0
-
-A stable release requires:
-
-- documented upgrade policy
-- stable Markdown format
-- stable API versioning
-- reproducible site rebuild
-- safe atomic publishing
-- tested Apache deployment
-- ChatGPT Actions compatibility
-- referrer support
-- import and backup documentation
-
-## Contribution Priorities
-
-Good first contributions:
-
-- additional tests
-- templates
-- documentation corrections
-- Apache deployment examples
-- importers
-- localization
-- accessibility improvements
-
-Changes requiring strong justification:
-
-- database support
-- daemon mode
-- built-in user management
-- plugin framework
-- embedded LLM
-- JavaScript-heavy administration UI
-
-## Project Guardrail
-
-Before accepting a feature, ask:
-
-1. Does it help convert thought into durable public writing?
-2. Can it remain optional?
-3. Can all primary data remain plain Markdown?
-4. Can published pages remain readable without Python?
-5. Does it preserve installation simplicity?
-6. Would a separate tool be a better home for this feature?
-
-If the answer to these questions is mostly no, the feature does not belong in aiDiary.
+- https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites
+- https://help.openai.com/en/articles/20001547-hosting-a-plugin-with-chatgpt-sites
+- https://learn.chatgpt.com/docs/sites/data-and-connections

@@ -1,320 +1,135 @@
 # aiDiary Requirements
 
+**Status:** canonical product requirements, revised 2026-10-17.
+**Architecture decision:** ChatGPT Sites + Site-hosted MCP plugin + D1.
+**Supersedes:** original Python CGI + Apache + no-database design.
+
 ## 1. Purpose
 
-aiDiary is a lightweight publishing tool that turns long AI-assisted thinking sessions into readable, date-based public writing.
+Turn useful conclusions from AI-assisted conversations into durable, readable personal blog posts on the author's website, without copy-pasting into a separate CMS.
+
+The essential workflow is:
+
+> Save this as a draft. Revise it. Publish it. Update the published article.
+
+ChatGPT is the primary *editorial interface*. aiDiary is the separate content store and public publisher. ChatGPT conversations are **never themselves public**.
+
+## 2. Users and boundaries
+
+- MVP: one authenticated author, any number of anonymous readers.
+- Author uses a personal ChatGPT account and installs/connects an aiDiary plugin hosted on a ChatGPT Site.
+- Readers use ordinary web browsers without ChatGPT accounts.
+- The site remains readable if the author is not currently running ChatGPT or a local PC.
+- The blog does not charge readers or invoke an LLM API for article reads or searches.
+- No user registration, comments, multi-author collaboration, or general-purpose CMS in MVP.
+
+## 3. Canonical decisions
+
+1. **ChatGPT Sites hosts the blog** and Site-side application logic.
+2. **D1 is the operational source of truth**, including drafts and published revisions.
+3. Markdown is the article body format and the **portable export/backup format**, not the primary live persistence layer.
+4. **Site-hosted MCP tools** are the authoring path from ChatGPT. A connected personal plugin is required.
+5. Readers get only the **published revision**, enforced server-side.
+6. Content updates are data mutations; a new article does **not** require rebuilding/redeploying site code.
+7. Draft creation/editing never implicitly publishes; publication requires explicit user intent.
+8. Backend software on NUC or VPS is **not required** for normal blog operations.
+9. The implementation must not depend on unspecified provider behavior; unsupported capabilities become explicit PoC blockers.
+10. Backup and migration must remain feasible without access to a proprietary database format.
+
+## 4. MVP functional requirements
+
+### 4.1 Articles
+
+Each entry has an immutable identifier, title, stable URL slug, Markdown body, optional summary, tags, status, creation/update/publication timestamps, and revision metadata.
+
+- New entry defaults to draft.
+- A draft is invisible to anonymous readers, list/search feeds, previews, and share links.
+- Revising a published entry must not expose an unpublished revision automatically.
+- The author may publish a specific saved revision or unpublish an entry.
+- Unpublishing removes the entry from all public queries and its permalink (return 404 or 410). Historical content cannot be withdrawn from third-party caches; set cache policy appropriately.
+- Slug changes must be deliberate; prefer stable permalinks and explicit redirects when implemented.
+- Do not provide permanent remote deletion in MVP.
+
+### 4.2 Authoring tools
+
+Minimum ChatGPT MCP tool surface:
+
+| Tool | Behavior |
+| --- | --- |
+| save_draft | Create a private draft from supplied title and Markdown; idempotent on request ID |
+| list_entries | List authorized drafts and published entries |
+| get_entry | Read complete authorized entry and revision |
+| update_entry | Create a new saved revision with an expected revision/version precondition |
+| publish_entry | Explicitly publish a selected saved revision |
+| unpublish_entry | Withdraw the public revision without deleting history |
+| export_entries | Return/download portable Markdown with metadata |
+
+- Editing decisions are driven by the user's prompts, not autonomous extraction of all chat content.
+- Publishing must be a separate tool operation; no hidden publication flags in save_draft/update_entry.
+- Clear tool results include entry ID, status, revision, and public URL only once confirmed.
+- Unsafe or ambiguous publication operations should fail closed.
+- Tool schemas and exact MCP transport adapt to the runtime, but semantics above are mandatory.
+
+### 4.3 Public website
+
+- Home page with newest published articles.
+- Direct public permalink for each published article.
+- Render safe Markdown with headings, links, paragraphs, lists, and fenced code.
+- Show publication/update times in Asia/Tokyo.
+- Responsive layout, mobile readability, semantic HTML, and metadata for sharing/search.
+- Basic archive navigation; public list excludes drafts and unpublished revisions.
+- Frontend/page code is deployed separately from content mutations.
+
+### 4.4 Preservation and backup
+
+- Export complete entries as Markdown plus metadata (front matter or accompanying machine-readable manifest).
+- Include unpublished drafts only in **owner-authorized** exports.
+- Preserve stable ID, slug, dates, tags, status, and revision history where practical.
+- Verify that exported content can be restored to an empty test D1 database.
+- Document backups, restore checks, and procedures for provider migration.
+- GitHub can hold source code and optionally **private encrypted or access-controlled** content backups; it is not required for each post.
+
+## 5. Security and privacy
+
+- All content-mutating tools and all draft reads MUST be authenticated/authorized **server-side** for the owner.
+- A successful ChatGPT/plugin connection alone is not proof that arbitrary visitors may write or read drafts.
+- Trust identity only from verified platform mechanisms; do not trust arbitrary client headers, supplied emails, or caller-provided author IDs.
+- Server-side allowlist a configured author identity; if author identity is unavailable inside hosted MCP tools, block production until a supported authorization mechanism is proven.
+- Public APIs must always filter by published revision, not merely hide buttons/links.
+- Restrict write size, rate, and allowed Markdown; disable/sanitize raw HTML, escape metadata, validate slugs, protect secrets and logs.
+- Mutations must be idempotent under retries, with revision checks to prevent stale overwrites.
+- Do not silently publish a raw conversation, confidential details, connected-app content, or private notes.
+- Treat D1 and R2 as cloud storage; do not claim data remains only on the author's NUC.
+- Public readers must not be required to authorize third-party plugins.
+
+## 6. Reliability
+
+- Last confirmed published revision remains readable on failed edit/publish attempts.
+- Updates are consistent and revisioned. A failed publish must not produce partial public state.
+- Retries with the same request ID do not duplicate articles.
+- Clearly report operational errors and permission failures.
+- Build/test data must never be mistaken for published real content.
+- Have a verified export and restoration procedure before production cutover.
 
-It is not a general-purpose CMS, social network, raw chat archive, or globally consistent wiki.
+## 7. MVP acceptance criteria
 
-> Preserve the result of AI-assisted thinking as human-readable writing, publish it on the user's own website, and keep it readable without requiring a running application or database.
+1. A ChatGPT conversation successfully invokes an installed, connected aiDiary plugin.
+2. Asking to save a draft produces a D1 record visible to the author only.
+3. Anonymous users cannot read drafts or invoke mutations, even by guessing URLs/API calls.
+4. Explicit publish makes the entry available on a normal public URL.
+5. Publishing does not require modifying or redeploying the frontend.
+6. Saving an unpublished revision to an existing published entry leaves the old published revision public.
+7. Explicitly publishing the new revision updates the public page; stale edits fail.
+8. Unpublish withdraws the entry from public views.
+9. Markdown export and restore reproduce the article with metadata.
+10. Each behavior is proven on the actual Sites environment/account, not only local mocks.
 
-## 2. Problems to Solve
+## 8. Non-goals in MVP
 
-### 2.1 AI conversations become fragmented
+Python CGI, Apache hosting, referrer-log parsing, RSS/Atom, advanced search, topic timelines, AI memory extraction, auto-publish scheduling, social features, payments, embedded LLM inference, multiple authors, local NUC dependencies, real-time collaborative editing.
 
-Long AI conversations gradually become slower and harder to manage. Users must periodically start new conversations, causing context and conclusions to become fragmented across multiple threads.
+RSS, tags, search, context export, and topic timelines may follow after the core publishing loop succeeds. The previous tDiary-style referrer requirement is intentionally deferred; it depended on Apache logs.
 
-### 2.2 Raw chat logs are difficult to read
+## 9. Legal and licensing
 
-AI conversations contain repeated questions, corrections, abandoned ideas, tangents, duplicated explanations, and context useful only to the original participant. Publishing them as-is preserves the process but produces poor reading material.
-
-### 2.3 Social networks are unsuitable for long-form thought
-
-Social networks are optimized for short posts, images, immediate reactions, and algorithmic timelines. They provide weak support for long-form thought that should remain readable for years.
-
-### 2.4 Wikis are expensive to maintain
-
-A wiki attempts to preserve the current, consistent version of knowledge. As content grows, authors must reconcile contradictions, update related pages, remove stale conclusions, and merge duplicated explanations.
-
-A diary may preserve changing opinions without treating them as errors.
-
-## 3. Product Position
-
-| Tool | Primary role |
-|---|---|
-| AI chat | Explore and develop ideas |
-| aiDiary | Preserve and publish the result of thinking |
-| Wiki | Maintain a current and internally consistent body of knowledge |
-| Social media | Distribute short content and receive immediate reactions |
-
-Core distinction:
-
-> AI conversations are temporary. The resulting thought should not be.
-
-## 4. Target Users
-
-- Developers who already operate a personal or project website
-- People who use ChatGPT, Claude, Gemini, or similar tools for extended thinking
-- Users who want to publish long-form thought without deploying a full CMS
-- Users who prefer plain files, static HTML, and self-hosting
-- Users migrating away from proprietary note services
-
-Typical uses:
-
-- Add a developer's thinking log to an existing website
-- Summarize and publish an AI discussion
-- Document rejected technical approaches
-- Record how a design decision evolved
-- Maintain a public development diary
-- Preserve long-form essays outside social media
-- Create a durable handoff between separate AI conversations
-
-## 5. Design Principles
-
-1. **Markdown is the source of truth.**
-2. **Writing may be dynamic; reading must be static.**
-3. **Publishing may require software. Reading must not.**
-4. **No database.**
-5. **No daemon.**
-6. **No container required.**
-7. **No built-in AI dependency.**
-8. **Existing websites must remain independent of aiDiary.**
-9. **A broken CGI must not make published entries unreadable.**
-10. **Generated data must be replaceable from primary Markdown sources.**
-11. **The product must remain narrow enough to resist CMS-style expansion.**
-
-Short form:
-
-> No database. No daemon. No container. Just CGI and Markdown.
-
-## 6. MVP Functional Requirements
-
-### 6.1 Entry model
-
-Each entry shall support:
-
-- title
-- publication date
-- slug
-- tags
-- status: `draft` or `published`
-- Markdown body
-- optional summary
-- creation timestamp
-- update timestamp
-
-### 6.2 Markdown storage
-
-- Each entry shall be stored as a human-readable `.md` file.
-- Metadata shall be stored in YAML front matter.
-- File paths shall be derived from validated dates and slugs.
-- Client-provided arbitrary filesystem paths shall never be accepted.
-- Published and draft content shall remain recoverable without aiDiary.
-
-Example:
-
-```markdown
----
-title: Why web diaries return in the AI era
-date: 2026-07-22
-slug: why-web-diaries-return
-tags:
-  - ai
-  - personal-web
-status: published
-created_at: 2026-07-22T18:00:00+09:00
-updated_at: 2026-07-22T18:30:00+09:00
----
-
-Article body.
-```
-
-### 6.3 HTTP API
-
-The MVP shall expose an HTTP API suitable for ChatGPT Actions and other AI clients.
-
-```text
-POST /entries
-GET  /entries/{id}
-PUT  /entries/{id}
-POST /entries/{id}/publish
-POST /entries/{id}/unpublish
-GET  /entries
-GET  /context
-GET  /openapi.json
-```
-
-Deletion is intentionally excluded from the MVP. Entries may be unpublished but not remotely destroyed.
-
-### 6.4 Authentication
-
-- Mutating API endpoints shall require an HTTP Bearer token.
-- Token comparison shall use constant-time comparison.
-- Tokens shall not be stored inside published directories.
-- Tokens shall never be written to application or access logs.
-- Separate write and publish tokens may be supported.
-- Read-only public endpoints shall not require authentication unless configured otherwise.
-
-### 6.5 Static site generation
-
-Publishing an entry shall generate:
-
-- article HTML
-- home page
-- year archive
-- month archive
-- tag archive
-- RSS or Atom feed
-- optional JSON search index
-
-Published files shall be served directly by Apache, Nginx, or another ordinary web server.
-
-### 6.6 Draft workflow
-
-- New entries shall default to `draft`.
-- Publishing shall require an explicit API call.
-- Updating a draft shall not affect the public site.
-- Updating a published entry shall rebuild affected static outputs atomically.
-
-### 6.7 Existing website integration
-
-aiDiary shall support installation below an existing website, for example:
-
-```text
-https://example.com/diary/
-https://example.com/cgi-bin/aidiary.cgi/
-```
-
-It shall not require ownership of the website root.
-
-### 6.8 Today's Referrers
-
-The MVP shall support tDiary-style referrer visibility.
-
-- Aggregate external HTTP referrers per article and date
-- Ignore empty referrers
-- Ignore internal navigation
-- Allow known bots and crawlers to be excluded
-- Render a “Today's Referrers” section or static data fragment
-- Store referrer data separately from article Markdown
-- Tolerate missing or malformed referrer logs without blocking publishing
-
-Search query terms are not guaranteed because modern browsers and search engines often omit them.
-
-### 6.9 RSS or Atom
-
-- Published entries shall appear in a feed.
-- Feed generation shall occur at publish or rebuild time.
-- Feed generation shall not require a database.
-- Feed URLs shall remain stable.
-
-### 6.10 Search and tags
-
-MVP search shall remain lightweight:
-
-- tag archive pages
-- optional static JSON full-text index
-- no external search server
-- no vector database
-
-### 6.11 OpenAPI
-
-- aiDiary shall publish an OpenAPI document.
-- The document shall describe Bearer authentication and supported endpoints.
-- The schema shall be usable by ChatGPT Actions without custom middleware.
-
-## 7. Non-Functional Requirements
-
-### 7.1 Portability
-
-- Primary target: Apache CGI
-- Secondary compatibility target: any CGI-capable web server
-- Python shall be the only mandatory runtime dependency where practical.
-- Installation shall not require root access where ordinary CGI hosting permits user scripts.
-
-### 7.2 Minimal environment impact
-
-Installation should require only:
-
-1. copying the CGI package
-2. creating content and output directories
-3. creating a configuration file
-4. configuring a Bearer token
-5. enabling CGI routing
-
-No mandatory database server, systemd unit, Docker service, reverse proxy, background worker, message queue, or Redis.
-
-### 7.3 Reliability
-
-- Writes shall use temporary files followed by atomic replacement.
-- Concurrent modification shall be guarded by file locking.
-- Rebuilds shall not leave partially generated public pages.
-- A failed rebuild shall preserve the previously published site.
-- Markdown files shall remain readable even if generated HTML is lost.
-
-### 7.4 Security
-
-- Request body size shall be limited.
-- Slugs shall be strictly validated.
-- HTML input shall be rejected or sanitized according to configuration.
-- CGI scripts and secrets shall live outside the public document root.
-- Error responses shall not expose filesystem paths or secrets.
-- Published output shall escape untrusted metadata.
-- Remote deletion shall not be enabled in the MVP.
-
-### 7.5 Performance
-
-- Page reads shall be handled entirely by static file serving.
-- CGI execution shall occur only for API operations or explicit maintenance.
-- The MVP does not need optimization for high write concurrency.
-- Rebuilding a personal-scale site of several thousand entries should remain practical.
-
-### 7.6 Data ownership
-
-- Users shall retain direct access to all primary content.
-- No proprietary export operation shall be required.
-- Git shall be supported as an optional versioning and backup mechanism.
-- Generated indexes and knowledge summaries shall be disposable.
-
-## 8. Explicitly Out of Scope for MVP
-
-- graphical administration panel
-- user registration
-- multiple authors
-- comments
-- social timeline
-- follower graph
-- recommendation algorithm
-- plugin marketplace
-- relational database
-- built-in LLM
-- vector database
-- collaborative real-time editing
-- advanced role-based access control
-- wiki-style global consistency enforcement
-- SaaS hosting platform
-
-## 9. Future Knowledge Layer
-
-The knowledge layer shall be implemented after the publishing MVP and shall never overwrite diary entries.
-
-Planned capabilities:
-
-- tags across entries
-- stable topics across changing tag names
-- chronological thought timelines
-- summaries of changes in opinion
-- current conclusions
-- rejected alternatives
-- reasons for changes
-- unresolved questions
-- context packages for starting a new AI conversation
-
-```text
-Diary entries       = immutable primary sources
-Tag indexes         = mechanically generated views
-Thought timelines   = generated chronological views
-Knowledge summaries = AI-generated, disposable derived data
-```
-
-The knowledge layer shall always link back to supporting diary entries.
-
-## 10. Licensing
-
-aiDiary shall be released under:
-
-```text
-BSD-3-Clause
-```
-
-The license reflects the project's preference for permissive use, portability, minimal restrictions, commercial compatibility, and protection against unauthorized use of contributor names for endorsement.
+Planned project license is BSD-3-Clause. Only publish content the author has authorized and has rights to share. Review privacy and platform policies before public launch.
