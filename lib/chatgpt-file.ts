@@ -24,7 +24,7 @@ export function parseChatGPTFile(value: unknown): ChatGPTFile {
       typeof file.download_url !== "string" || !file.download_url.trim() || file.download_url.length > 8192)
     throw new DiaryError("invalid_file", "ChatGPT file reference must include file_id and download_url", 400);
   if (file.mime_type !== undefined &&
-      (typeof file.mime_type !== "string" || !validMediaType(file.mime_type) || !file.mime_type.startsWith("image/")))
+      (typeof file.mime_type !== "string" || (file.mime_type !== "application/octet-stream" && (!validMediaType(file.mime_type) || !file.mime_type.startsWith("image/")))))
     throw new DiaryError("invalid_media", "Only PNG, JPEG, GIF and WebP are supported", 415);
   if (file.file_name !== undefined &&
       (typeof file.file_name !== "string" || !file.file_name.trim() || file.file_name.length > 180))
@@ -38,7 +38,8 @@ export async function downloadChatGPTImage(
   const file = parseChatGPTFile(value);
   const {image} = await downloadImage(file.download_url, chatGPTFileHosts(configured), fetcher, {
     maxUrlLength: 8192,
-    expectedType: file.mime_type
+    expectedType: file.mime_type === "application/octet-stream" ? undefined : file.mime_type,
+    allowUnknownMIME: true
   });
   const name = (file.file_name ?? image.name).replace(/[\\/\u0000-\u001f\u007f]/g, "_");
   return new File([image], name, { type: image.type });
