@@ -27,13 +27,13 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [body,setBody]=useState(initial.body_md);
  const [tagsText,setTagsText]=useState(initial.tags.join(", "));
  const [revision,setRevision]=useState<number|null>(initial.revision??null);
- const [publishedRev,setPublishedRev]=useState<number|null>(initial.published_revision??null);
  const [heroId,setHeroId]=useState(initial.hero_media_id??null);
  const [heroAlt,setHeroAlt]=useState(initial.hero_alt_text??"");
  const [imageUrl,setImageUrl]=useState("");
  const [manualMediaId,setManualMediaId]=useState("");
  const [status,setStatus]=useState(initial.status??"draft");
  const [visibility,setVisibility]=useState<"owner"|"public">(initial.visibility??"owner");
+ const [activeVisibility,setActiveVisibility]=useState<"owner"|"public">(initial.visibility??"owner");
  const [dirty,setDirty]=useState(false);
  const [busy,setBusy]=useState(false);
  const [uploading,setUploading]=useState(false);
@@ -82,7 +82,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
       return;
     }
     setRevision(Number(result.revision));
-    setMessage("リビジョン "+result.revision+" として非公開で保存しました。公開版は変更されていません。");
+    setMessage(status==="published"?"リビジョン "+result.revision+" を保存しました。公開中の記事にも反映されています。":"リビジョン "+result.revision+" を下書きに保存しました。公開はされていません。");
   }catch(e){setError(e instanceof Error?e.message:"保存に失敗しました。");}
   finally{setBusy(false);}
  }
@@ -93,7 +93,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   try{
    const result=await postJson("publish_entry",{entry_id:initial.id,revision,
       visibility,request_id:crypto.randomUUID()});
-   setPublishedRev(Number(result.revision));setStatus("published");
+   setStatus("published");setActiveVisibility(visibility);
    setMessage(visibility==="public"?"選択したリビジョンを一般公開しました。":"オーナー限定で公開しました。");
   }catch(e){setError(e instanceof Error?e.message:"公開に失敗しました。");}
   finally{setBusy(false);}
@@ -104,7 +104,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   setBusy(true);setError("");setMessage("");
   try{
    await postJson("unpublish_entry",{entry_id:initial.id,request_id:crypto.randomUUID()});
-   setPublishedRev(null);setStatus("draft");setVisibility("owner");
+   setStatus("draft");setVisibility("owner");setActiveVisibility("owner");
    setMessage("非公開の下書きに戻しました。リビジョン履歴は残ります。");
   }catch(e){setError(e instanceof Error?e.message:"非公開化に失敗しました。");}
   finally{setBusy(false);}
@@ -120,7 +120,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    setRevision(Number(result.revision));
    setHeroId(nextId);setManualMediaId("");
    if(!nextId)setHeroAlt("");
-   setMessage("アイキャッチをリビジョン "+result.revision+" に保存しました。公開版はそのままです。");
+   setMessage(status==="published"?"アイキャッチを保存しました。公開中の記事にも反映されています。":"アイキャッチを保存しました。記事は引き続き非公開です。");
   }catch(e){setError(e instanceof Error?e.message:"アイキャッチの変更に失敗しました。");}
   finally{setBusy(false);}
  }
@@ -135,7 +135,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    setRevision(Number(result.revision));
    setHeroId(String(result.media_id));
    setImageUrl("");
-   setMessage("画像をR2に取り込み、アイキャッチをリビジョン "+result.revision+" に保存しました。公開版は変更されていません。");
+   setMessage(status==="published"?"画像を取り込み、公開中の記事にもアイキャッチを反映しました。":"画像を取り込みました。記事は引き続き非公開です。");
   }catch(e){setError(e instanceof Error?e.message:"URLから画像を取り込めませんでした。");}
   finally{setBusy(false);}
  }
@@ -162,7 +162,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    <p className="eyebrow">OWNER / MARKDOWN EDITOR</p>
    <h1>{initial.id?"記事を編集":"新しい記事を書く"}</h1>
    <p className="owner-lead">
-     {revision?"最新版 r"+revision+" · "+(publishedRev===null?"公開版なし":"公開版 r"+publishedRev):"新しい非公開の下書き"}
+     {revision?"最新版 r"+revision+" · "+(status==="published"?(activeVisibility==="public"?"一般公開中":"オーナー限定で表示中"):"非公開の下書き"):"新しい非公開の下書き"}
      {" · "}{dirty?"未保存の変更あり":"保存済み"}
    </p>
    <div className="owner-tabs"><a href="/owner/archive">← アーカイブ</a>
@@ -205,14 +205,14 @@ export function MarkdownEditor({initial}:{initial:Initial}){
      </div>
      <div className="editor-actions">
        <button type="submit" disabled={busy||uploading||!dirty&&!initial.id} className="editor-primary">{busy?"処理中…":initial.id?"新しいリビジョンを保存":"非公開下書きを作成"}</button>
-       {initial.id&&<span className="editor-hint">保存だけでは公開版は変わりません。</span>}
+       {initial.id&&<span className="editor-hint">{status==="published"?"保存すると閲覧可能な最新版も更新されます。":"保存だけでは公開されません。"}</span>}
      </div>
    </form>
    {error&&<p className="editor-error" role="alert">{error}{error.includes("Expected")&&<button className="ghost" onClick={()=>location.reload()}>最新版を読み込み直す</button>}</p>}
    {message&&<p className="editor-notice" role="status">{message}</p>}
    {initial.id&&<section className="editor-hero">
       <h2>アイキャッチ画像</h2>
-      <p className="owner-lead">記事本文とは別に保存します。変更は新しい非公開リビジョンとなり、公開版を自動更新しません。</p>
+      <p className="owner-lead">アイキャッチは本文とは別に保存します。公開中の記事では保存後すぐに最新版へ反映されます。下書きは非公開のままです。</p>
       {heroId?<img src={"/media/"+heroId} alt={heroAlt||"アイキャッチ"} className="hero-image" loading="lazy"/>:
        <p className="editor-hint">現在のリビジョンにアイキャッチはありません。</p>}
       <label>代替テキスト<input maxLength={200} value={heroAlt} onChange={e=>setHeroAlt(e.target.value)} placeholder="画像の説明"/></label>
@@ -249,21 +249,21 @@ export function MarkdownEditor({initial}:{initial:Initial}){
             全文版をダウンロード
           </a>
         </div>}
-      {status!=="published"||visibility!=="public"||publishedRev!==revision?
+      {status!=="published"||activeVisibility!=="public"?
         <p className="editor-hint">この記事の最新版は一般公開されていないため、書き出すファイルに原文リンクは含めません。noteで公開する前に必ず確認してください。</p>:
         <p className="editor-hint">一般公開されている原文へのリンクを末尾に付けます。</p>}
       <p className="editor-hint">非公開メディアは自動転送されません。画像はnote上で別途アップロードしてください。インポート後はnoteの編集画面で表示を確認してください。</p>
    </section>}
    {initial.id&&<section className="editor-publication">
-      <h2>公開する</h2>
-      <p>保存したリビジョンだけを、明示的な操作で公開します。未保存の編集は先に保存してください。</p>
+      <h2>公開設定</h2>
+      <p>{status==="published"?"公開中の記事は常に最新版を表示します。閲覧範囲の変更には以下の操作が必要です。":"下書きは非公開のまま保存されます。公開する場合だけ以下の操作を行ってください。"}</p>
       <label>閲覧範囲
         <select value={visibility} onChange={e=>setVisibility(e.target.value as "owner"|"public")}>
           <option value="owner">オーナー限定</option><option value="public">一般公開（匿名閲覧可）</option>
         </select>
       </label>
       <div className="editor-actions">
-        <button type="button" disabled={busy||uploading||dirty||!revision} onClick={()=>void publish()} className="editor-primary">保存済み r{revision??"-"} を公開</button>
+        <button type="button" disabled={busy||uploading||dirty||!revision} onClick={()=>void publish()} className="editor-primary">{status==="published"?"閲覧範囲を適用":"最新版 r"+(revision??"-")+" を公開"}</button>
         {status==="published"&&<button type="button" disabled={busy||uploading} onClick={()=>void unpublish()} className="ghost">公開を取り消す</button>}
       </div>
    </section>}
