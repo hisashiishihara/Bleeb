@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {noteExport,markdownToNoteHtml} from "../lib/note-export.ts";
 
 const entry={id:"11111111-2222-3333-4444-555555555555",slug:"sample-story",
- status:"published",visibility:"public",published_revision:2};
+ status:"published",visibility:"public",published_revision:2,latest_revision:2};
 const revision={
  revision:2,title:"日本語の記事",summary:"短い概要です。",
  body_md:"## 見出し\n\n本文は**重要**です。[参考資料](https://example.com/a?x=1&y=2)\n\n続きの本文です。",
@@ -42,7 +42,7 @@ test("owner-only, draft and unpublished latest revision never contain a dead sou
  const options=[
   {...entry,visibility:"owner"},
   {...entry,status:"draft",published_revision:null},
-  {...entry,published_revision:1}
+  {...entry,latest_revision:1}
  ];
  for(const option of options){
   for(const mode of ["excerpt","full"]){
@@ -52,6 +52,11 @@ test("owner-only, draft and unpublished latest revision never contain a dead sou
    assert.match(out.content,/STATUS: Draft/);
   }
  }
+});
+
+test("legacy publication pointer does not hide a currently public latest article",()=>{
+ const content=noteExport({...entry,published_revision:1},revision,"full",origin);
+ assert.equal(content.sourceUrl,origin+"/posts/sample-story");
 });
 
 test("HTML payloads, unsafe schemes and media links cannot escape into note HTML",()=>{
