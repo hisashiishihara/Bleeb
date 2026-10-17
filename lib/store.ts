@@ -9,6 +9,7 @@ import { bucket, createMedia } from "./media-store";
 import { downloadImage, configuredImageHosts } from "./remote-image";
 import { MEDIA_ID_RE } from "./media-rules";
 import { decodeBase64Image } from "./base64-image";
+import { downloadChatGPTImage } from "./chatgpt-file";
 export { readableEntries as publicEntries, readableEntry as publicEntry } from "./reader-store";
 type Revision = ExportRevision;
 type MutationRow = { operation: string; response_json: string };
@@ -318,6 +319,46 @@ export async function uploadMedia(db:DB,args:unknown){
  }
 }
 
+
+/** Resolve a ChatGPT host-file reference, validate signed HTTPS download and
+ * transfer actual image bytes to private R2. This never broadens publication.
+ */
+export async function uploadChatGPTImage(db:DB,args:unknown){
+ const input=args as HeroArgs;
+ const id=entryId(input.entry_id),req=requestId(input.request_id);
+ const existing=await prior(db,req);
+ if(existing){
+  if(existing.operation!=="upload_chatgpt_image")
+   throw new DiaryError("request_conflict","Request ID used for another operation",409);
+  return JSON.parse(existing.response_json);
+ }
+ const expected=revisionNumber(input.expected_revision);
+ const entry=await requireEntry(db,id);
+ if(entry.latest_revision!==expected)throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+ if(input.usage!=="hero"&&input.usage!=="inline")
+  throw new DiaryError("invalid_input","Usage must be hero or inline");
+ if(input.alt_text!==undefined && (typeof input.alt_text!=="string"||input.alt_text.length>200))
+  throw new DiaryError("invalid_input","Image alt text must be at most 200 characters",400);
+ const hosts=(env as unknown as {AI_DIARY_CHATGPT_FILE_HOSTS?:string}).AI_DIARY_CHATGPT_FILE_HOSTS;
+ const image=await downloadChatGPTImage(input.file,hosts);
+ const asset=await createMedia(db,bucket(),id,image);
+ try{
+  let result:Record<string,unknown>;
+  if(input.usage==="hero"){
+   result=await newHeroRevision(db,{...input,hero_media_id:asset.id},"upload_chatgpt_image",
+    {media_id:asset.id,media_url:asset.url});
+  }else{
+   result=await mutate(db,req,"upload_chatgpt_image",
+    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:asset.markdown},[]);
+  }
+  if(result.media_id!==asset.id)await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  return result;
+ }catch(error){
+  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  throw error;
+ }
+}
+
 export async function dispatch(db: DB, action: string, args: unknown) {
   if (!args || typeof args !== "object" || Array.isArray(args)) throw new DiaryError("invalid_input", "JSON object required");
   switch(action) {
@@ -332,6 +373,7 @@ export async function dispatch(db: DB, action: string, args: unknown) {
     case "clear_entry_hero_media": return clearHeroMedia(db,args);
     case "import_media_from_url": return importMediaFromUrl(db,args);
     case "upload_media": return uploadMedia(db,args);
+    case "upload_chatgpt_image": return uploadChatGPTImage(db,args);
     case "delete_media": {
       const input=args as Record<string,unknown>;
       return deleteMedia(db,bucket(),typeof input.media_id==="string"?input.media_id:"",
