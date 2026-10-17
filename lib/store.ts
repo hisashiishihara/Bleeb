@@ -17,10 +17,15 @@ export function database(): DB {
 export function authorizedOwner(request: Request): void {
   const e = env as unknown as { AI_DIARY_OWNER_EMAIL?: string; AI_DIARY_OWNER_API_ENABLED?: string };
   const actual = request.headers.get("oai-authenticated-user-email");
-  // Until authenticated header provenance is verified on a deployed Site, owner APIs are off.
-  if (e.AI_DIARY_OWNER_API_ENABLED !== "true" || !e.AI_DIARY_OWNER_EMAIL || !actual ||
+  // Sites ingress authenticates callers and replaces client-supplied identity headers.
+  // A service bypass token alone supplies no user identity and is never an author.
+  if (!request.headers.get("oai-authenticated-user-id") || !e.AI_DIARY_OWNER_EMAIL || !actual ||
       actual.trim().toLowerCase() !== e.AI_DIARY_OWNER_EMAIL.trim().toLowerCase()) {
     throw new DiaryError("forbidden", "Owner authentication is required", 403);
+  }
+  if (e.AI_DIARY_OWNER_API_ENABLED !== "true") {
+    // Proves real MCP identity propagation without echoing personal identifiers.
+    throw new DiaryError("owner_api_disabled", "Verified owner identity received; owner API is disabled", 403);
   }
 }
 
@@ -208,3 +213,4 @@ export async function dispatch(db: DB, action: string, args: unknown) {
     default: throw new DiaryError("not_found", "Unknown operation", 404);
   }
 }
+
