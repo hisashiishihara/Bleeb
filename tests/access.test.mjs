@@ -60,7 +60,7 @@ test("owner read diagnostics return the exact runtime tools/list without writes"
 });
 
 
-test("owner/public matrix blocks drafts, unreleased revisions, legacy member scopes and immediate restrictions",async()=>{
+test("owner/public matrix blocks drafts, displays latest revisions, protects legacy scopes and immediate restrictions",async()=>{
  const {db,sqlite}=fixture();
  try {
   // Stored memberships are retained, but cannot grant access while suspended.
@@ -81,19 +81,19 @@ test("owner/public matrix blocks drafts, unreleased revisions, legacy member sco
   await store.updateEntry(db,{entry_id:entry.entry_id,expected_revision:2,title:"UNRELEASED SECRET TITLE",body_md:"UNRELEASED SECRET BODY",request_id:req()});
   for(const viewer of [owner,anon,fakeClaims]){
    const result=await readableEntry(db,entry.slug,viewer);
-   assert.equal(result.body_md,"PUBLIC BODY");
-   assert.equal(result.title,"PUBLIC TITLE");
-   assert.ok(!JSON.stringify(await readableEntries(db,viewer)).includes("SECRET"));
+   assert.equal(result.body_md,"UNRELEASED SECRET BODY");
+   assert.equal(result.title,"UNRELEASED SECRET TITLE");
+   assert.ok(JSON.stringify(await readableEntries(db,viewer)).includes("SECRET"));
   }
-  await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"owner",request_id:req()});
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:3,visibility:"owner",request_id:req()});
   for(const viewer of [anon,fakeClaims]) assert.equal(await readableEntry(db,entry.slug,viewer),null);
-  assert.equal((await readableEntry(db,entry.slug,owner)).body_md,"PUBLIC BODY");
-  assert.equal((await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,request_id:req()})).visibility,"owner");
+  assert.equal((await readableEntry(db,entry.slug,owner)).body_md,"UNRELEASED SECRET BODY");
+  assert.equal((await store.publishEntry(db,{entry_id:entry.entry_id,revision:3,request_id:req()})).visibility,"owner");
   for(const legacy of ["paid","registered"]){
-   await assert.rejects(store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:legacy,request_id:req()}));
+   await assert.rejects(store.publishEntry(db,{entry_id:entry.entry_id,revision:3,visibility:legacy,request_id:req()}));
    await db.prepare("UPDATE entries SET visibility=? WHERE id=?").bind(legacy,entry.entry_id).run();
    assert.equal(await readableEntry(db,entry.slug,fakeClaims),null);
-   assert.equal((await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,request_id:req()})).visibility,"owner");
+   assert.equal((await store.publishEntry(db,{entry_id:entry.entry_id,revision:3,request_id:req()})).visibility,"owner");
   }
   assert.equal((await searchOwnerArchive(db,{q:"UNRELEASED SECRET BODY"})).entries[0].matched_revision,3);
   await store.unpublishEntry(db,{entry_id:entry.entry_id,request_id:req()});
@@ -154,7 +154,7 @@ test("migration preserves old published content but defaults its audience to own
  }finally{sqlite.close();}
 });
 
-test("hero changes append revisions without leaking unpublished images",async()=>{
+test("hero changes appear immediately on the latest published revision",async()=>{
  const {db,sqlite}=fixture();
  try{
   const mediaId="550e8400-e29b-41d4-a716-446655440000";
@@ -166,10 +166,10 @@ test("hero changes append revisions without leaking unpublished images",async()=
   const first=await store.setHeroMedia(db,{entry_id:entry.entry_id,expected_revision:1,hero_media_id:mediaId,alt_text:"illustration",request_id:req()});
   assert.equal(first.revision,2);
   assert.equal(first.published_revision,1);
-  assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,null);
+  assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,mediaId);
   assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).revision.hero_media_id,mediaId);
   const {readableMedia}=await import("../lib/media-store.ts");
-  assert.equal(await readableMedia(db,mediaId,false),null);
+  assert.equal((await readableMedia(db,mediaId,false)).id,mediaId);
   await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"public",request_id:req()});
   assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,mediaId);
   assert.equal((await readableEntries(db,anon))[0].hero_media_id,mediaId);
@@ -179,7 +179,7 @@ test("hero changes append revisions without leaking unpublished images",async()=
   assert.equal(next.published_revision,2);
   const cleared=await store.clearHeroMedia(db,{entry_id:entry.entry_id,expected_revision:3,request_id:req()});
   assert.equal(cleared.revision,4);
-  assert.equal((await readableMedia(db,mediaId,false)).id,mediaId);
+  assert.equal(await readableMedia(db,mediaId,false),null);
   await store.publishEntry(db,{entry_id:entry.entry_id,revision:4,visibility:"public",request_id:req()});
   assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,null);
   assert.equal(await readableMedia(db,mediaId,false),null);
@@ -190,7 +190,7 @@ test("hero changes append revisions without leaking unpublished images",async()=
  }finally{sqlite.close();}
 });
 
-test("trusted HTTPS image import saves R2 and hero revision, never auto-publishes",async()=>{
+test("trusted HTTPS image import saves R2 and hero revision, respects existing publication and visibility",async()=>{
  const {db,sqlite}=fixture();
  const oldFetch=globalThis.fetch;
  const previousHosts=globalThis.__diaryTestEnv.AI_DIARY_IMAGE_SOURCE_HOSTS;
@@ -217,7 +217,7 @@ test("trusted HTTPS image import saves R2 and hero revision, never auto-publishe
   assert.equal((await store.importMediaFromUrl(db,args)).media_id,imported.media_id);
   assert.equal((await db.prepare("SELECT COUNT(*) AS count FROM media_assets").first()).count,1);
   const {readableMedia}=await import("../lib/media-store.ts");
-  assert.equal(await readableMedia(db,imported.media_id,false),null);
+  assert.equal((await readableMedia(db,imported.media_id,false)).id,imported.media_id);
   await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"public",request_id:req()});
   assert.equal((await readableEntry(db,entry.slug)).hero_media_id,imported.media_id);
   assert.equal((await readableMedia(db,imported.media_id,false)).id,imported.media_id);
@@ -262,7 +262,7 @@ test("MCP Base64 uploads create private R2 images and unpublished hero revisions
   assert.equal(hero.published_revision,1);
   assert.equal((await call(args)).media_id,hero.media_id);
   assert.equal((await store.getEntry(db,{entry_id:entry.entry_id,revision:2})).revision.hero_media_id,hero.media_id);
-  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,null);
+  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,hero.media_id);
   assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM media_assets").first()).n,2);
   assert.equal(stored.size,2);
   await assert.rejects(store.uploadMedia(db,{...args,request_id:req(),expected_revision:1}),e=>e.status===409);
@@ -309,7 +309,7 @@ test("ChatGPT-generated fileParams image uploads via signed URL and remains unpu
   assert.equal(requests[0].options.credentials,"omit");
   assert.equal(requests[0].options.redirect,"manual");
   assert.equal(requests[0].options.referrerPolicy,"no-referrer");
-  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,null);
+  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,direct.media_id);
   assert.equal((await store.getEntry(db,{entry_id:entry.entry_id,revision:2})).revision.hero_media_id,direct.media_id);
   assert.equal((await store.uploadChatGPTImage(db,args)).media_id,direct.media_id);
   assert.equal(requests.length,1);
@@ -370,6 +370,6 @@ test("note export is owner-only, read-only and revision-locked",async()=>{
   assert.match(liveContent,/STATUS: Draft/);
   await store.updateEntry(db,{entry_id:saved.entry_id,expected_revision:2,title:"DRAFT AFTER PUBLICATION",body_md:"UNPUBLISHED SECRET",request_id:req()});
   const now=await get("excerpt",3,ownerHeaders);
-  assert.doesNotMatch(await now.text(),/https:\/\/test\.example\.invalid\/posts\//);
+  assert.match(await now.text(),/https:\/\/test\.example\.invalid\/posts\//);
  }finally{sqlite.close();}
 });
