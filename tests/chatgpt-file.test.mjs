@@ -12,6 +12,7 @@ test("ChatGPT native fileParam has required four-field shape and strict host def
  assert.ok(chatGPTFileHosts().includes("files.oaiusercontent.com"));
  for(const invalid of ["sandbox:/mnt/data/image.png",undefined,null,"file_test",{download_url:"https://files.oaiusercontent.com/test.png"}])
   assert.throws(()=>parseChatGPTFile(invalid),{code:"invalid_file"});
+ assert.equal(parseChatGPTFile({...file(),mime_type:"application/octet-stream"}).mime_type,"application/octet-stream");
  assert.throws(()=>parseChatGPTFile({...file(),mime_type:"text/html"}),{code:"invalid_media"});
  assert.throws(()=>parseChatGPTFile({...file(),file_name:""}),{code:"invalid_file"});
 });
@@ -52,4 +53,28 @@ test("redirects to untrusted domains and wrong signatures are rejected",async()=
  await assert.rejects(downloadChatGPTImage(file(),undefined,async()=>new Response(bytes,{
   headers:{"Content-Type":"image/jpeg"}
  })),{code:"invalid_media"});
+});
+
+test("ChatGPT fileParams supplies octet-stream MIME for genuine generated PNG",async()=>{
+ const genericFile={...file(),mime_type:"application/octet-stream"};
+ const result=await downloadChatGPTImage(genericFile,undefined,
+  async()=>new Response(bytes,{headers:{"Content-Type":"application/octet-stream"}}));
+ assert.equal(result.type,"image/png");
+ assert.deepEqual(new Uint8Array(await result.arrayBuffer()),bytes);
+ const headerless=await downloadChatGPTImage(genericFile,undefined,
+  async()=>new Response(bytes,{headers:{}}));
+ assert.equal(headerless.type,"image/png");
+ const noHint=await downloadChatGPTImage({...file(),mime_type:undefined},undefined,
+  async()=>new Response(bytes,{headers:{"Content-Type":"application/octet-stream"}}));
+ assert.equal(noHint.type,"image/png");
+});
+
+test("octet-stream fileParams rejects nonimages and mismatched declared MIME",async()=>{
+ const genericFile={...file(),mime_type:"application/octet-stream"};
+ await assert.rejects(downloadChatGPTImage(genericFile,undefined,
+  async()=>new Response(new TextEncoder().encode("<html>not a PNG</html>"),{headers:{"Content-Type":"application/octet-stream"}})),{code:"invalid_media"});
+ await assert.rejects(downloadChatGPTImage(genericFile,undefined,
+  async()=>new Response(bytes,{headers:{"Content-Type":"text/html"}})),{code:"invalid_media"});
+ await assert.rejects(downloadChatGPTImage({...file(),mime_type:"image/jpeg"},undefined,
+  async()=>new Response(bytes,{headers:{"Content-Type":"application/octet-stream"}})),{code:"invalid_media"});
 });
