@@ -235,6 +235,25 @@ export function MarkdownEditor({initial}:{initial:Initial}){
       </div>
       {dirty&&<p className="editor-hint">先に本文の変更を保存してください。</p>}
    </section>}
+   {initial.id&&revision&&<section className="editor-publication">
+      <h2>note用に書き出す</h2>
+      <p>保存済みの最新版 r{revision} をnoteのMT形式（.txt）に変換します。noteへ自動投稿・公開はしません。</p>
+      {dirty?<p className="editor-hint">未保存の変更があります。先に保存してから書き出してください。</p>:
+        <div className="editor-actions">
+          <a className="editor-edit-link"
+            href={"/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=excerpt&revision="+revision}>
+            冒頭・要約版をダウンロード
+          </a>
+          <a className="editor-edit-link"
+            href={"/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=full&revision="+revision}>
+            全文版をダウンロード
+          </a>
+        </div>}
+      {status!=="published"||visibility!=="public"||publishedRev!==revision?
+        <p className="editor-hint">この記事の最新版は一般公開されていないため、書き出すファイルに原文リンクは含めません。noteで公開する前に必ず確認してください。</p>:
+        <p className="editor-hint">一般公開されている原文へのリンクを末尾に付けます。</p>}
+      <p className="editor-hint">非公開メディアは自動転送されません。画像はnote上で別途アップロードしてください。インポート後はnoteの編集画面で表示を確認してください。</p>
+   </section>}
    {initial.id&&<section className="editor-publication">
       <h2>公開する</h2>
       <p>保存したリビジョンだけを、明示的な操作で公開します。未保存の編集は先に保存してください。</p>
