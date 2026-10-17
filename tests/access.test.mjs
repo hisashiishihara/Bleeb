@@ -22,6 +22,7 @@ const {POST:mcp}=await import("../app/mcp/route.ts");
 const {searchOwnerArchive,getOwnerArchiveEntry}=await import("../lib/owner-archive.ts");
 const {tools}=await import("../plugin/tool-definitions.ts");
 const {POST:ownerApi}=await import("../app/api/owner/[action]/route.ts");
+const {GET:noteFile}=await import("../app/owner/archive/[id]/export-note/route.ts");
 function fixture(){
   const sqlite=new DatabaseSync(":memory:");
   for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql","0003_media.sql","0004_hero_media.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
@@ -334,3 +335,41 @@ test("ChatGPT-generated fileParams image uploads via signed URL and remains unpu
  }
 });
 
+
+
+test("note export is owner-only, read-only and revision-locked",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const saved=await store.saveDraft(db,{title:"PRIVATE NOTE TITLE",body_md:"PRIVATE BODY SHOULD NOT LEAK",summary:"only owner summary",request_id:req()});
+  const url=(mode,revision)=>"https://test.example.invalid/owner/archive/"+saved.entry_id+"/export-note?mode="+mode+"&revision="+revision;
+  const context={params:Promise.resolve({id:saved.entry_id})};
+  const get=(mode,revision,headers={})=>noteFile(new Request(url(mode,revision),{headers}),context);
+  for(const headers of [{},{"oai-authenticated-user-id":"pretend"},{"oai-authenticated-user-id":"pretend","oai-authenticated-user-email":"fake@example.invalid"}]){
+   const response=await get("full",1,headers);
+   assert.equal(response.status,404);
+   assert.equal(await response.text(),"");
+  }
+  const before=sqlite.prepare("SELECT count(*) as n FROM mutation_requests").get().n;
+  const owner=await get("full",1,ownerHeaders);
+  assert.equal(owner.status,200);
+  assert.match(owner.headers.get("Content-Disposition"),/attachment; filename=/);
+  assert.match(owner.headers.get("Cache-Control"),/no-store/);
+  assert.match(await owner.text(),/PRIVATE BODY SHOULD NOT LEAK/);
+  assert.equal((await get("unknown",1,ownerHeaders)).status,400);
+  assert.equal((await get("full",999,ownerHeaders)).status,409);
+  assert.equal(sqlite.prepare("SELECT count(*) as n FROM mutation_requests").get().n,before);
+  await store.updateEntry(db,{entry_id:saved.entry_id,expected_revision:1,title:"LATER DRAFT",body_md:"LATEST PRIVATE",summary:"new",request_id:req()});
+  assert.equal((await get("full",1,ownerHeaders)).status,409);
+  const excerpt=await get("excerpt",2,ownerHeaders);
+  assert.equal(excerpt.status,200);
+  assert.doesNotMatch(await excerpt.text(),/\/posts\//);
+  await store.publishEntry(db,{entry_id:saved.entry_id,revision:2,visibility:"public",request_id:req()});
+  const live=await get("excerpt",2,ownerHeaders);
+  const liveContent=await live.text();
+  assert.match(liveContent,/https:\/\/test\.example\.invalid\/posts\//);
+  assert.match(liveContent,/STATUS: Draft/);
+  await store.updateEntry(db,{entry_id:saved.entry_id,expected_revision:2,title:"DRAFT AFTER PUBLICATION",body_md:"UNPUBLISHED SECRET",request_id:req()});
+  const now=await get("excerpt",3,ownerHeaders);
+  assert.doesNotMatch(await now.text(),/https:\/\/test\.example\.invalid\/posts\//);
+ }finally{sqlite.close();}
+});
