@@ -134,8 +134,10 @@ test("thirteen MCP tools remain owner-only and publish schema permits only owner
   const entry=JSON.parse((await call("save_draft",{title:"架空MCP",body_md:"first",request_id:req()})).content[0].text);
   for(const name of ["list_entries","get_entry"]) assert.ok(!(await call(name,{entry_id:entry.entry_id})).isError);
   assert.ok(!(await call("update_entry",{entry_id:entry.entry_id,expected_revision:1,title:"架空MCP",body_md:"second",request_id:req()})).isError);
+  const stale=await call("publish_entry",{entry_id:entry.entry_id,revision:1,visibility:"public",request_id:req()});
+  assert.equal(stale.isError,true);
   for(const v of ["owner","public"]){
-   const result=await call("publish_entry",{entry_id:entry.entry_id,revision:1,visibility:v,request_id:req()});
+   const result=await call("publish_entry",{entry_id:entry.entry_id,revision:2,visibility:v,request_id:req()});
    assert.equal(JSON.parse(result.content[0].text).visibility,v);
   }
   assert.ok(!(await call("export_entries",{include_drafts:true})).isError);
