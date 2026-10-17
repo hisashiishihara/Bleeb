@@ -33,22 +33,12 @@ object key before bytes are removed. A failed delete leaves D1 metadata intact
 for a retry. The R2 object is checked absent after `delete` before the metadata
 record is removed. If it was already deleted, a retry completes the cleanup.
 
-## Immediate cleanup requested by owner
+## One-off cleanup
 
-- Specific file: `793.jpg`
-- Media UUID: `0039655a-516c-4416-abba-9e570d0e4a31`
-- Article: `37799b00-3526-4083-ae3b-66b89aaf4281`
-- The owner explicitly requested permanent file deletion.
-- ChatGPT already saved revision 4 without the Markdown reference and published
-  it with `owner` visibility, so the active published version no longer
-  references this object.
-- **R2 deletion remains pending** until the Sites update is deployed and the
-  new owner-only browser/MCP deletion action succeeds.
-- Do not delete any other media, change the article's visibility to public,
-  or rewrite earlier revisions.
-- After deployment, use the new action with the UUID and article guard,
-  then confirm both R2 object absence and D1 row absence, with old media URL
-  returning 404 even for authenticated owner.
+Specific private file and article identifiers must be passed out of band in the
+owner's authenticated deployment session, rather than committed to source.
+Never delete any other file or change publication visibility. Verify R2 and
+D1 deletion in the Site before reporting completion.
 
 ## Deployment tests
 

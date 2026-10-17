@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {DatabaseSync} from "node:sqlite";
 import {deleteMedia,ownerArticleMedia} from "../lib/media-deletion.ts";
-const mediaId="0039655a-516c-4416-abba-9e570d0e4a31";
-const otherId="1039655a-516c-4416-abba-9e570d0e4a31";
-const entryId="37799b00-3526-4083-ae3b-66b89aaf4281";
+const mediaId="550e8400-e29b-41d4-a716-446655440000";
+const otherId="650e8400-e29b-41d4-a716-446655440000";
+const entryId="333e8400-e29b-41d4-a716-446655440000";
 const key="entries/"+entryId+"/"+mediaId;
 
 function fixture(){
@@ -16,11 +16,11 @@ function fixture(){
  sqlite.prepare("INSERT INTO entries(id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at) VALUES(?,?,'published','owner',2,1,'now','now')")
   .run(entryId,"fixture");
  sqlite.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES(?,?,?, ?,NULL,'[]','now')")
-  .run(entryId,1,"published","![793.jpg](/media/"+mediaId+")");
+  .run(entryId,1,"published","![example.jpg](/media/"+mediaId+")");
  sqlite.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES(?,?,?, ?,NULL,'[]','now')")
   .run(entryId,2,"new draft","Updated article without image");
  sqlite.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,?,?,?,?)")
-  .run(mediaId,entryId,key,"image/jpeg",128,"793.jpg","now");
+  .run(mediaId,entryId,key,"image/jpeg",128,"example.jpg","now");
  const db={
   prepare(sql){return {bind(...args){
    return {first(){return sqlite.prepare(sql).get(...args)||null},
