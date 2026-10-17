@@ -2,7 +2,7 @@
 
 Conversation-first personal publishing: privately save and revise Markdown from ChatGPT, then **explicitly publish** selected revisions to a readable Japanese technical blog.
 
-**Status (2026-10-17):** An owner-only Sites PoC has verified seven MCP tools with fictional content, authenticated owner access and D1 publication. See [real environment validation](docs/SITES_AUTH_VALIDATION.md). New additions to GitHub do not automatically deploy to Sites.
+**Status (2026-10-17):** The owner Site has validated authenticated MCP operations. GitHub source now declares twelve tools including the new `upload_media` Base64 image adapter; its live deployment and binary argument transport still require real-site testing. See [MCP upload gate](docs/MCP_UPLOAD_MEDIA.md). New additions to GitHub do not automatically deploy to Sites.
 
 ## Implementation
 
@@ -18,9 +18,9 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 - `lib/store.ts`: D1 article CRUD, revision append, publishing/unpublishing, idempotency, owner-only export.
 - `app/api/owner/[action]/route.ts`: owner operations; **disabled by default** until trusted Sites authentication is demonstrated.
 - `drizzle/0000_initial.sql`: initial SQLite/D1 tables.
-- `plugin/tool-definitions.ts`: contracts for the seven tools served through `app/mcp/route.ts` in the owner-only test deployment.
+- `plugin/tool-definitions.ts`: contracts for the twelve owner MCP tools served through `app/mcp/route.ts`, including URL import and bounded Base64 image upload.
 - `scripts/bundle-to-sql.mjs`: offline export bundle to SQL conversion for recovery.
-- `.openai/hosting.json`: official Sites D1 binding (`DB`); no R2 needed.
+- `.openai/hosting.json`: Sites data bindings (D1 `DB` and private R2 `MEDIA`) required for the editor and media MCP tools.
 
 ## Developer checks
 
