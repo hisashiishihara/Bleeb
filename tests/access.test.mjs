@@ -103,6 +103,33 @@ test("owner/public matrix blocks drafts, displays latest revisions, protects leg
  }finally{sqlite.close();}
 });
 
+test("owner-only published article shows latest body and cover without anonymous access",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const id="66c6f1dd-b078-43d6-8a1d-0098d98c2297";
+  const saved=await store.saveDraft(db,{title:"Fixture owner article",body_md:"previous text",request_id:req()});
+  await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,?,?,?,?)")
+   .bind(id,saved.entry_id,"entries/"+saved.entry_id+"/"+id,"image/webp",123,"image.webp","now").run();
+  await store.publishEntry(db,{entry_id:saved.entry_id,revision:1,visibility:"owner",request_id:req()});
+  await store.updateEntry(db,{entry_id:saved.entry_id,expected_revision:1,title:"Latest owner article",body_md:"latest text",request_id:req()});
+  const hero=await store.setHeroMedia(db,{entry_id:saved.entry_id,expected_revision:2,hero_media_id:id,alt_text:"private image",request_id:req()});
+  assert.equal(hero.revision,3);
+  assert.equal(hero.published_revision,1); // legacy pointer is preserved for audit
+  const owner={owner:true,registered:false,paid:false},anon={owner:false,registered:false,paid:false};
+  const latest=await readableEntry(db,saved.slug,owner);
+  assert.equal(latest.title,"Latest owner article");
+  assert.equal(latest.body_md,"latest text");
+  assert.equal(latest.hero_media_id,id);
+  assert.equal(await readableEntry(db,saved.slug,anon),null);
+  assert.equal((await readableEntries(db,anon)).length,0);
+  const {readableMedia}=await import("../lib/media-store.ts");
+  assert.equal(await readableMedia(db,id,false),null);
+  assert.equal((await readableMedia(db,id,true)).id,id);
+  await store.unpublishEntry(db,{entry_id:saved.entry_id,request_id:req()});
+  assert.equal(await readableEntry(db,saved.slug,owner),null);
+ }finally{sqlite.close();}
+});
+
 test("membership endpoints are inert, even for authenticated owner; owner APIs reject cross-origin calls",async()=>{
  const {db,sqlite}=fixture();
  try {
