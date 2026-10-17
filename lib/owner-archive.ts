@@ -1,4 +1,4 @@
-import { entryId, DiaryError } from "./input";
+import { entryId, DiaryError } from "./input.ts";
 type DB = D1Database;
 
 export type ArchiveItem = {
