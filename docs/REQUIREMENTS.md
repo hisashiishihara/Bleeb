@@ -29,9 +29,9 @@ ChatGPT is the primary *editorial interface*. aiDiary is the separate content st
 2. **D1 is the operational source of truth**, including drafts and published revisions.
 3. Markdown is the article body format and the **portable export/backup format**, not the primary live persistence layer.
 4. **Site-hosted MCP tools** are the authoring path from ChatGPT. A connected personal plugin is required.
-5. Readers get only the **published revision**, enforced server-side.
+5. Reader routes show only articles with status=published, and render their **latest saved revision** after server-side audience checks.
 6. Content updates are data mutations; a new article does **not** require rebuilding/redeploying site code.
-7. Draft creation/editing never implicitly publishes; publication requires explicit user intent.
+7. Initial publication requires explicit intent. Further saves or hero changes to already-published entries update the reader-visible latest revision immediately at the existing audience scope; drafts stay private.
 8. Backend software on NUC or VPS is **not required** for normal blog operations.
 9. The implementation must not depend on unspecified provider behavior; unsupported capabilities become explicit PoC blockers.
 10. Backup and migration must remain feasible without access to a proprietary database format.
@@ -44,8 +44,8 @@ Each entry has an immutable identifier, title, stable URL slug, Markdown body, o
 
 - New entry defaults to draft.
 - A draft is invisible to anonymous readers, list/search feeds, previews, and share links.
-- Revising a published entry must not expose an unpublished revision automatically.
-- The author may publish a specific saved revision or unpublish an entry.
+- Revising a published entry immediately updates the displayed version at its existing audience scope. Do not save sensitive material to an already-published public entry.
+- The author may explicitly publish the latest saved revision or unpublish an entry. To restore an older version, save it again as the new latest revision.
 - Unpublishing removes the entry from all public queries and its permalink (return 404 or 410). Historical content cannot be withdrawn from third-party caches; set cache policy appropriately.
 - Slug changes must be deliberate; prefer stable permalinks and explicit redirects when implemented.
 - Do not provide permanent remote deletion in MVP.
@@ -65,7 +65,7 @@ Minimum ChatGPT MCP tool surface:
 | export_entries | Return/download portable Markdown with metadata |
 
 - Editing decisions are driven by the user's prompts, not autonomous extraction of all chat content.
-- Publishing must be a separate tool operation; no hidden publication flags in save_draft/update_entry.
+- Initial publishing or changing audience remains a separate explicit operation. Editing an already-published entry automatically updates its displayed latest revision without changing audience.
 - Clear tool results include entry ID, status, revision, and public URL only once confirmed.
 - Unsafe or ambiguous publication operations should fail closed.
 - Tool schemas and exact MCP transport adapt to the runtime, but semantics above are mandatory.
@@ -95,7 +95,7 @@ Minimum ChatGPT MCP tool surface:
 - A successful ChatGPT/plugin connection alone is not proof that arbitrary visitors may write or read drafts.
 - Trust identity only from verified platform mechanisms; do not trust arbitrary client headers, supplied emails, or caller-provided author IDs.
 - Server-side allowlist a configured author identity; if author identity is unavailable inside hosted MCP tools, block production until a supported authorization mechanism is proven.
-- Public APIs must always filter by published revision, not merely hide buttons/links.
+- Public APIs must enforce status=published and public audience server-side before selecting the latest revision; never rely on hidden buttons or client-side checks.
 - Restrict write size, rate, and allowed Markdown; disable/sanitize raw HTML, escape metadata, validate slugs, protect secrets and logs.
 - Mutations must be idempotent under retries, with revision checks to prevent stale overwrites.
 - Do not silently publish a raw conversation, confidential details, connected-app content, or private notes.
@@ -104,7 +104,7 @@ Minimum ChatGPT MCP tool surface:
 
 ## 6. Reliability
 
-- Last confirmed published revision remains readable on failed edit/publish attempts.
+- Failed edits or publication attempts leave the previously saved, visible revision readable; successful edits to published entries update the visible latest revision.
 - Updates are consistent and revisioned. A failed publish must not produce partial public state.
 - Retries with the same request ID do not duplicate articles.
 - Clearly report operational errors and permission failures.
@@ -118,8 +118,8 @@ Minimum ChatGPT MCP tool surface:
 3. Anonymous users cannot read drafts or invoke mutations, even by guessing URLs/API calls.
 4. Explicit publish makes the entry available on a normal public URL.
 5. Publishing does not require modifying or redeploying the frontend.
-6. Saving an unpublished revision to an existing published entry leaves the old published revision public.
-7. Explicitly publishing the new revision updates the public page; stale edits fail.
+6. Saving a newer revision to an already-published entry makes that revision reader-visible at its existing audience scope, without publishing drafts.
+7. A successful save updates the reader-visible latest revision for published entries; stale edits fail. Initial publication and audience changes require explicit publication.
 8. Unpublish withdraws the entry from public views.
 9. Markdown export and restore reproduce the article with metadata.
 10. Each behavior is proven on the actual Sites environment/account, not only local mocks.
@@ -137,7 +137,7 @@ Planned project license is BSD-3-Clause. Only publish content the author has aut
 
 ## Article access update (2026-10-17)
 
-[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select only the published revision after audience authorization; drafts and history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.
+[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select the latest revision of status=published entries after audience authorization; drafts and full revision history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.
 
 
 ## Current operation update (2026-10-17)
