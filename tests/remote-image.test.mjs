@@ -66,3 +66,8 @@ test("non-image, mismatched magic bytes and oversized responses are rejected",as
     new Response(new Uint8Array(10485761),{headers:{"Content-Type":"image/png"}})),
    e=>e.status===413);
 });
+
+test("ordinary URL import never accepts an octet-stream even with PNG signature",async()=>{
+ await assert.rejects(downloadImage("https://images.example.com/a.png",allow,
+  async()=>new Response(png,{headers:{"Content-Type":"application/octet-stream"}})),{code:"invalid_media"});
+});
