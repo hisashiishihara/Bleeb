@@ -222,3 +222,8 @@ The actual framework and build commands must follow the supported Sites deployme
 ## 11. Deferred capabilities
 
 RSS/Atom feed, tags/search indexes, topic timelines, context extraction for future chats, media/R2, custom domain, redirects, Webmention, site analytics, scheduled publishing, multi-author support. Implement only when the conversation-to-public-page loop is stable.
+
+
+## Article access update (2026-10-17)
+
+[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select only the published revision after audience authorization; drafts and history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.

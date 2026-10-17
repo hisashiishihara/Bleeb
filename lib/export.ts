@@ -7,6 +7,7 @@ export type ExportEntry = {
   id: string; slug: string; status: string; latest_revision: number;
   published_revision: number | null; created_at: string; updated_at: string;
   published_at: string | null;
+  visibility?: "owner"|"paid"|"registered"|"public";
 };
 export type ExportBundle = {
   schema_version: 1;

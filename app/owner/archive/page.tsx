@@ -24,7 +24,7 @@ export default async function OwnerArchive({searchParams}:Props){
     <p className="eyebrow">OWNER / PRIVATE</p>
     <h1>自分のアーカイブ</h1>
     <p className="owner-lead">下書き・公開記事・過去リビジョンも含む個人用の記録。ここは本人専用です。</p>
-    <nav className="owner-tabs"><a href="/owner/archive" aria-current="page">記事を探す</a><a href="/owner/referrers">リンク元</a><a href="/">公開ブログ</a></nav>
+    <nav className="owner-tabs"><a href="/owner/archive" aria-current="page">記事を探す</a><a href="/owner/referrers">リンク元</a><a href="/owner/members">会員管理</a><a href="/">公開ブログ</a></nav>
     <form method="get" action="/owner/archive" className="archive-search">
       <label>キーワード<input name="q" maxLength={100} placeholder="タイトル・本文・過去の文章を検索" defaultValue={filters.q}/></label>
       <label>状態<select name="status" defaultValue={filters.status}>
@@ -36,7 +36,7 @@ export default async function OwnerArchive({searchParams}:Props){
     <div className="section-head"><h2>保存済みの記事</h2><span>表示 {entries.length} 件</span></div>
     {entries.length===0?<div className="empty">該当する記事はありません。</div>:<div className="archive-list">{entries.map(e=>
       <article className="archive-result" key={e.id}>
-        <div className="archive-result-head"><span className={e.status==="draft"?"owner-state-draft":"owner-state-published"}>{e.status==="draft"?"下書き":"公開済み"}</span><span>{date(e.updated_at)} 更新</span><span>最新版 r{e.latest_revision}</span></div>
+        <div className="archive-result-head"><span className={e.status==="draft"?"owner-state-draft":"owner-state-published"}>{e.status==="draft"?"下書き":"公開済み"}</span><span>{date(e.updated_at)} 更新</span><span>最新版 r{e.latest_revision}</span><span>閲覧範囲: {e.visibility}</span></div>
         {(filters.q||filters.tag)&&<p>r{e.matched_revision} に一致{e.matched_revision!==e.latest_revision?"（過去のリビジョン）":""}</p>}
         <h3><a href={"/owner/archive/"+encodeURIComponent(e.id)+"?revision="+e.matched_revision}>{e.title}</a></h3>
         {e.summary&&<p>{e.summary}</p>}

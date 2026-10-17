@@ -11,6 +11,7 @@ test("archive opens the newest matching revision, with matching title and tags",
     sqlite.exec(`INSERT INTO entries VALUES ('fixture01','fixture','draft',2,NULL,'t','t',NULL);
       INSERT INTO entry_revisions VALUES ('fixture01',1,'旧版タイトル','瑠璃環701 共通語',NULL,'["historic"]','t');
       INSERT INTO entry_revisions VALUES ('fixture01',2,'最新版タイトル','銀河棚902 共通語',NULL,'["current"]','t');`);
+    sqlite.exec(readFileSync(new URL("../drizzle/0002_article_access.sql", import.meta.url), "utf8"));
     const db = { prepare(sql) {
       const statement = sqlite.prepare(sql);
       const bound = values => ({

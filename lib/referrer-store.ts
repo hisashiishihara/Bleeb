@@ -13,7 +13,7 @@ export async function recordPublicReferral(db: DB, slug: string, referrer: unkno
   const source = parseReferralSource(referrer, siteUrl);
   if (!source) return false;
   const entry = await db.prepare(
-    "SELECT id FROM entries WHERE slug=? AND status='published' AND published_revision IS NOT NULL"
+    "SELECT id FROM entries WHERE slug=? AND status='published' AND visibility='public' AND published_revision IS NOT NULL"
   ).bind(slug).first<{id:string}>();
   if (!entry) return false;
   const day = new Date().toISOString().slice(0, 10);

@@ -5,6 +5,7 @@ export type ArchiveItem = {
   id: string;
   slug: string;
   status: "draft" | "published";
+  visibility: "owner"|"paid"|"registered"|"public";
   latest_revision: number;
   matched_revision: number;
   published_revision: number | null;
@@ -35,7 +36,7 @@ export async function searchOwnerArchive(db:DB, input:{q?:string;status?:string;
   }
   if (filter.status !== "all") { where.push("e.status=?"); params.push(filter.status); }
   const sql =
-    "SELECT e.id,e.slug,e.status,e.latest_revision,e.published_revision,e.updated_at,r.revision AS matched_revision,r.title,r.summary,r.tags_json "+
+    "SELECT e.id,e.slug,e.status,e.visibility,e.latest_revision,e.published_revision,e.updated_at,r.revision AS matched_revision,r.title,r.summary,r.tags_json "+
     "FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=(SELECT MAX(s.revision) FROM entry_revisions s WHERE "+revisionWhere.join(" AND ")+") "+
     (where.length ? "WHERE "+where.join(" AND ")+" " : "") +
     "ORDER BY e.updated_at DESC,e.id DESC LIMIT ? OFFSET ?";

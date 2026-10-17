@@ -1,11 +1,13 @@
 import { database, publicEntries } from "../lib/store";
 
+import { currentViewer } from "../lib/reader";
+
 export const dynamic = "force-dynamic";
 
 const jpDate = (value:string) => new Intl.DateTimeFormat("ja-JP",{timeZone:"Asia/Tokyo",year:"numeric",month:"long",day:"numeric"}).format(new Date(value));
 
 export default async function Home() {
-  const posts = await publicEntries(database());
+  const posts = await publicEntries(database(), await currentViewer());
   return (
     <div className="home">
       <section className="intro">

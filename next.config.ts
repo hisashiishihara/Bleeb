@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   async headers() {
-    return ["/owner/:path*", "/api/owner/:path*"].map(source => ({
+    return ["/:path*"].map(source => ({
       source,
       headers: [
         { key: "Cache-Control", value: "private, no-store, max-age=0" },

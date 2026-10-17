@@ -16,24 +16,20 @@ Route: `/owner/archive` with `/owner/archive/{entry_id}`.
 
 This is a **read-only** UI. Normal ChatGPT MCP commands remain the only editor.
 
-## Article state and audience (next stage, not yet implemented)
+## Article state and audience
+
+Implemented in the access-control change; [ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) is authoritative for the implementation and testing boundary. Site-wide public sharing remains a separate approval.
 
 A saved draft and the *published revision* are different concepts.
 
-- `draft`: only the owner, regardless of selected future audience.
+- `draft`: only the owner, regardless of selected audience.
 - `published + owner`: private personal knowledge article, deliberately marked as published internally.
 - `published + registered`: owner and authenticated members.
 - `published + paid`: owner and verified active subscribers.
 - `published + public`: anonymous readers and everyone above.
 
 Membership and paid entitlements are distinct from ChatGPT Plus or other OpenAI plan subscriptions.
-To avoid accidental disclosure, do not flip the owner-only Site policy for the current
-binary published/draft schema. Design and test the new audience gate on every server
-read surface **before** any publicly accessible deployment. Public HTML, metadata,
-feeds, shared previews and caching must all use one common audience check.
-
-Payment provider, reader registration, multi-user auth, and general-public sharing are
-not in the current implementation. Introducing those needs a separate approval.
+The four audiences, reader registration and owner membership management are implemented as described in ARTICLE_ACCESS.md. Do not flip the owner-only Site policy without separate authorization and real non-owner account validation. Payment provider integration and general-public sharing remain outside this release.
 
 ## tDiary-like referrers (first phase)
 

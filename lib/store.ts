@@ -3,6 +3,8 @@ import { DiaryError, entryId, requestId, revisionNumber, validateDraft, slugFor 
 import { makeExport, type ExportEntry, type ExportRevision } from "./export";
 
 type Entry = ExportEntry;
+import { visibility } from "./access";
+export { readableEntries as publicEntries, readableEntry as publicEntry } from "./reader-store";
 type Revision = ExportRevision;
 type MutationRow = { operation: string; response_json: string };
 type DB = D1Database;
@@ -76,7 +78,7 @@ export async function saveDraft(db: DB, args: unknown) {
   const id = crypto.randomUUID();
   const slug = slugFor(draft.title, id);
   const now = NOW();
-  const response = { entry_id: id, slug, status: "draft", revision: 1 };
+  const response = { entry_id: id, slug, status: "draft", revision: 1, visibility: "owner" };
   return mutate(db, req, "save_draft", response, [
     db.prepare("INSERT INTO entries(id,slug,status,latest_revision,published_revision,created_at,updated_at) VALUES(?,?,'draft',1,NULL,?,?)").bind(id, slug, now, now),
     db.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES(?,1,?,?,?,?,?)").bind(id, draft.title, draft.body_md, draft.summary ?? null, JSON.stringify(draft.tags), now)
@@ -90,8 +92,8 @@ export async function listEntries(db: DB, args: unknown) {
   const limit = a.limit === undefined ? 50 : Number(a.limit);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new DiaryError("invalid_input", "invalid limit");
   const query = status === "all"
-    ? "SELECT id,slug,status,latest_revision,published_revision,created_at,updated_at,published_at FROM entries ORDER BY updated_at DESC,id DESC LIMIT ?"
-    : "SELECT id,slug,status,latest_revision,published_revision,created_at,updated_at,published_at FROM entries WHERE status=? ORDER BY updated_at DESC,id DESC LIMIT ?";
+    ? "SELECT id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at,published_at FROM entries ORDER BY updated_at DESC,id DESC LIMIT ?"
+    : "SELECT id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at,published_at FROM entries WHERE status=? ORDER BY updated_at DESC,id DESC LIMIT ?";
   const prepared = db.prepare(query);
   const rows = await (status === "all" ? prepared.bind(limit) : prepared.bind(status, limit)).all<Entry>();
   return { entries: rows.results };
@@ -145,10 +147,12 @@ export async function publishEntry(db: DB, args: unknown) {
   const candidate = await db.prepare("SELECT revision FROM entry_revisions WHERE entry_id=? AND revision=?").bind(id,rev).first<{revision:number}>();
   if (!candidate) throw new DiaryError("not_found", "Saved revision not found", 404);
   const now = NOW();
-  const response = { entry_id: id, slug: entry.slug, status: "published", revision: rev, public_path: "/posts/" + entry.slug };
+  // Omitted audience preserves current scope; old clients never broaden it.
+  const audience = visibility(a.visibility === undefined ? entry.visibility ?? "owner" : a.visibility);
+  const response = { entry_id: id, slug: entry.slug, status: "published", revision: rev, visibility: audience, public_path: "/posts/" + entry.slug };
   return mutate(db, req, "publish_entry", response, [
-    db.prepare("UPDATE entries SET status='published',published_revision=?,published_at=?,updated_at=? WHERE id=?")
-      .bind(rev, now, now, id)
+    db.prepare("UPDATE entries SET status='published',visibility=?,published_revision=?,published_at=?,updated_at=? WHERE id=?")
+      .bind(audience, rev, now, now, id)
   ]);
 }
 
@@ -162,9 +166,9 @@ export async function unpublishEntry(db: DB, args: unknown) {
     return JSON.parse(previous.response_json);
   }
   await requireEntry(db, id);
-  const response = { entry_id: id, status: "draft", published_revision: null };
+  const response = { entry_id: id, status: "draft", visibility: "owner", published_revision: null };
   return mutate(db, req, "unpublish_entry", response, [
-    db.prepare("UPDATE entries SET status='draft',published_revision=NULL,published_at=NULL,updated_at=? WHERE id=?").bind(NOW(), id)
+    db.prepare("UPDATE entries SET status='draft',visibility='owner',published_revision=NULL,published_at=NULL,updated_at=? WHERE id=?").bind(NOW(), id)
   ]);
 }
 
@@ -184,20 +188,6 @@ export async function exportEntries(db: DB, args: unknown) {
     revisions.push(...revs.results.filter(x => includeDrafts || x.revision === entry.published_revision));
   }
   return makeExport(entries, revisions, NOW());
-}
-
-export async function publicEntries(db: DB, limit = 50) {
-  const rows = await db.prepare(
-    "SELECT e.slug,e.published_at,r.title,r.summary FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.published_revision WHERE e.status='published' AND e.published_revision IS NOT NULL ORDER BY e.published_at DESC LIMIT ?"
-  ).bind(limit).all<{slug:string;published_at:string;title:string;summary:string|null}>();
-  return rows.results;
-}
-
-export async function publicEntry(db: DB, slug: string) {
-  if (!/^[a-z0-9-]{1,90}$/.test(slug)) return null;
-  return db.prepare(
-    "SELECT e.slug,e.published_at,e.updated_at,r.title,r.summary,r.body_md FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.published_revision WHERE e.slug=? AND e.status='published' AND e.published_revision IS NOT NULL"
-  ).bind(slug).first<{slug:string;published_at:string;updated_at:string;title:string;summary:string|null;body_md:string}>();
 }
 
 export async function dispatch(db: DB, action: string, args: unknown) {

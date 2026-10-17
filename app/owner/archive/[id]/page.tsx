@@ -23,7 +23,7 @@ export default async function PrivateEntry({params,searchParams}:Props){
     <a className="back-link" href="/owner/archive">← 自分のアーカイブ</a>
     <p className="eyebrow">PRIVATE ARCHIVE / REVISION {content.revision}</p>
     <h1>{content.title}</h1>
-    <p className="owner-lead">{entry.status==="draft"?"非公開の下書き":"記事として公開中"} · 最新 r{entry.latest_revision} · 公開版 {entry.published_revision===null?"なし":"r"+entry.published_revision}</p>
+    <p className="owner-lead">{entry.status==="draft"?"非公開の下書き":"記事として公開中"} · 閲覧範囲 {entry.visibility} · 最新 r{entry.latest_revision} · 公開版 {entry.published_revision===null?"なし":"r"+entry.published_revision}</p>
     <p className="owner-lead">このリビジョン: {date(content.saved_at)} {isPublic?"（現在の公開版）":"（閲覧は本人限定）"}</p>
     <div className="revision-links"><strong>履歴を読む</strong>
       {history.map(item=><a key={item.revision} aria-current={content.revision===item.revision?"page":undefined} href={"/owner/archive/"+encodeURIComponent(id)+"?revision="+item.revision}>r{item.revision}</a>)}

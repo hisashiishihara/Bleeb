@@ -133,3 +133,8 @@ RSS, tags, search, context export, and topic timelines may follow after the core
 ## 9. Legal and licensing
 
 Planned project license is BSD-3-Clause. Only publish content the author has authorized and has rights to share. Review privacy and platform policies before public launch.
+
+
+## Article access update (2026-10-17)
+
+[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select only the published revision after audience authorization; drafts and history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.

@@ -13,7 +13,7 @@ export default function RootLayout({children}:{children:ReactNode}) {
       <div className="shell">
         <header className="site-header">
           <a className="brand" href="/" aria-label="aiDiary ホーム">ai<span>Diary</span></a>
-          <nav aria-label="サイトメニュー"><a href="/">記事一覧</a></nav>
+          <nav aria-label="サイトメニュー"><a href="/">記事一覧</a><a href="/account">会員登録・資格</a></nav>
         </header>
         <main>{children}</main>
         <footer className="footer">
