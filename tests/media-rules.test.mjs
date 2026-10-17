@@ -53,7 +53,7 @@ test("media SQL keeps asset ownership and old published revision intact",()=>{
   d.exec(sql0+"\n"+sql2+"\n"+sql3+"\n"+sql4);
   d.exec(`INSERT INTO entries(id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at) VALUES('e1','abc','published','public',2,1,'t','t');
     INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES('e1',1,'Live','![a](/media/${asset})',NULL,'[]','t');
-    INSERT INTO entry_revisions VALUES('e1',2,'Private','![a](/media/111e8400-e29b-41d4-a716-446655440000)',NULL,'[]','t');
+    INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES('e1',2,'Private','![a](/media/111e8400-e29b-41d4-a716-446655440000)',NULL,'[]','t');
     INSERT INTO media_assets VALUES('${asset}','e1','entries/e1/${asset}','image/png',8,'photo.png','t');`);
   const data=d.prepare("SELECT e.status,e.visibility,r.body_md FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.published_revision").get();
   assert.equal(referencesMedia(data.body_md,asset),true);
