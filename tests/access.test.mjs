@@ -167,3 +167,44 @@ test("hero changes append revisions without leaking unpublished images",async()=
   await assert.rejects(store.setHeroMedia(db,{entry_id:e2.entry_id,expected_revision:1,hero_media_id:mediaId,request_id:req()}),e=>e.status===404);
  }finally{sqlite.close();}
 });
+
+test("trusted HTTPS image import saves R2 and hero revision, never auto-publishes",async()=>{
+ const {db,sqlite}=fixture();
+ const oldFetch=globalThis.fetch;
+ const previousHosts=globalThis.__diaryTestEnv.AI_DIARY_IMAGE_SOURCE_HOSTS;
+ const previousMedia=globalThis.__diaryTestEnv.MEDIA;
+ try{
+  const entry=await store.saveDraft(db,{title:"Image import",body_md:"No hero yet",request_id:req()});
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"public",request_id:req()});
+  const stored=new Map();
+  globalThis.__diaryTestEnv.AI_DIARY_IMAGE_SOURCE_HOSTS="images.example.com";
+  globalThis.__diaryTestEnv.MEDIA={
+   async put(key,value){stored.set(key,await value.arrayBuffer());},
+   async delete(key){stored.delete(key);},
+   async head(key){return stored.has(key)?{key}:null;}
+  };
+  globalThis.fetch=async()=>new Response(new Uint8Array([137,80,78,71,13,10,26,10]),{
+   headers:{"Content-Type":"image/png"}
+  });
+  const idempotency=req();
+  const args={entry_id:entry.entry_id,expected_revision:1,source_url:"https://images.example.com/image.png",
+   usage:"hero",alt_text:"Generated image",request_id:idempotency};
+  const imported=await store.importMediaFromUrl(db,args);
+  assert.equal(imported.revision,2);
+  assert.equal(imported.published_revision,1);
+  assert.equal((await store.importMediaFromUrl(db,args)).media_id,imported.media_id);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS count FROM media_assets").first()).count,1);
+  const {readableMedia}=await import("../lib/media-store.ts");
+  assert.equal(await readableMedia(db,imported.media_id,false),null);
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"public",request_id:req()});
+  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,imported.media_id);
+  assert.equal((await readableMedia(db,imported.media_id,false)).id,imported.media_id);
+  assert.equal(stored.size,1);
+  await assert.rejects(store.importMediaFromUrl(db,{...args,request_id:req(),source_url:"http://images.example.com/x.png",expected_revision:2}),e=>e.status===400);
+ }finally{
+  sqlite.close();
+  globalThis.fetch=oldFetch;
+  globalThis.__diaryTestEnv.AI_DIARY_IMAGE_SOURCE_HOSTS=previousHosts;
+  globalThis.__diaryTestEnv.MEDIA=previousMedia;
+ }
+});
