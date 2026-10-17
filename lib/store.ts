@@ -8,6 +8,7 @@ import { deleteMedia } from "./media-deletion";
 import { bucket, createMedia } from "./media-store";
 import { downloadImage, configuredImageHosts } from "./remote-image";
 import { MEDIA_ID_RE } from "./media-rules";
+import { decodeBase64Image } from "./base64-image";
 export { readableEntries as publicEntries, readableEntry as publicEntry } from "./reader-store";
 type Revision = ExportRevision;
 type MutationRow = { operation: string; response_json: string };
@@ -274,6 +275,49 @@ export async function importMediaFromUrl(db:DB,args:unknown){
  }
 }
 
+
+/** Owner-only MCP upload. The caller must actually supply the Base64 bytes:
+ * a ChatGPT image attachment is not implicitly readable by this tool.
+ */
+export async function uploadMedia(db:DB,args:unknown){
+ const input=args as HeroArgs;
+ const id=entryId(input.entry_id),req=requestId(input.request_id);
+ const priorResponse=await prior(db,req);
+ if(priorResponse){
+  if(priorResponse.operation!=="upload_media")throw new DiaryError("request_conflict","Request ID used for another operation",409);
+  return JSON.parse(priorResponse.response_json);
+ }
+ const expected=revisionNumber(input.expected_revision);
+ const entry=await requireEntry(db,id);
+ if(entry.latest_revision!==expected)throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+ if(input.usage!=="hero"&&input.usage!=="inline")
+  throw new DiaryError("invalid_input","Usage must be hero or inline",400);
+ if(input.alt_text!==undefined && (typeof input.alt_text!=="string"||input.alt_text.length>200))
+  throw new DiaryError("invalid_input","Image alt text must be at most 200 characters",400);
+ const image=decodeBase64Image(input.image_base64,input.content_type,input.file_name);
+ const asset=await createMedia(db,bucket(),id,image);
+ try{
+  let response:Record<string,unknown>;
+  if(input.usage==="hero"){
+   response=await newHeroRevision(db,{...input,hero_media_id:asset.id},"upload_media",
+    {media_id:asset.id,media_url:asset.url});
+  }else{
+   const alt=typeof input.alt_text==="string"?input.alt_text:asset.id;
+   const cleanAlt=alt.replace(/[\\[\\]\\\\\\n\\r]/g," ").slice(0,200);
+   const markdown="!["+cleanAlt+"]("+asset.url+")";
+   response=await mutate(db,req,"upload_media",
+    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown},[]);
+  }
+  // Another identical request may have committed while bytes were stored.
+  // Avoid leaking a duplicate object when idempotency returns that response.
+  if(response.media_id!==asset.id)await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  return response;
+ }catch(error){
+  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  throw error;
+ }
+}
+
 export async function dispatch(db: DB, action: string, args: unknown) {
   if (!args || typeof args !== "object" || Array.isArray(args)) throw new DiaryError("invalid_input", "JSON object required");
   switch(action) {
@@ -287,6 +331,7 @@ export async function dispatch(db: DB, action: string, args: unknown) {
     case "set_entry_hero_media": return setHeroMedia(db,args);
     case "clear_entry_hero_media": return clearHeroMedia(db,args);
     case "import_media_from_url": return importMediaFromUrl(db,args);
+    case "upload_media": return uploadMedia(db,args);
     case "delete_media": {
       const input=args as Record<string,unknown>;
       return deleteMedia(db,bucket(),typeof input.media_id==="string"?input.media_id:"",
