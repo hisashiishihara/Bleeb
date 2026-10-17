@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import { ReferrerPing } from "../../components/referrer-ping";
 import { notFound } from "next/navigation";
 import { database, publicEntry } from "../../../lib/store";
 
@@ -19,6 +20,7 @@ export default async function Post({params}:Props) {
   if (!item) notFound();
   return (
     <article className="article">
+      <ReferrerPing slug={slug} />
       <a className="back-link" href="/">← 記事一覧へ戻る</a>
       <header className="article-header">
         <p className="eyebrow">JOURNAL ENTRY</p>

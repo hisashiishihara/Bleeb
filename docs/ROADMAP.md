@@ -120,3 +120,24 @@ Only then try publishing real notes.
 - https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites
 - https://help.openai.com/en/articles/20001547-hosting-a-plugin-with-chatgpt-sites
 - https://learn.chatgpt.com/docs/sites/data-and-connections
+
+## Accepted direction (2026-10-17)
+
+- **Private archive first**: give the single owner a separate web view of every draft,
+  unpublished revision and published article. Search title, body across history and tags;
+  ordinary readers must never enter or fetch this view.
+- **tDiary-style referrers**: aggregate origins of incoming visits to published articles by
+  day/article/domain into D1. Never store visitor IDs, IP addresses, raw referer paths or
+  query strings. Opt-in only when public viewing is explicitly enabled and validated.
+- **Visibility after the private archive**: distinguish a saved draft from a selected published
+  revision; future per-article audience tiers: owner, registered members, paid members,
+  public. Authenticated owner reads all. Registered/paid access requires server-side membership
+  and entitlement checks; none of those tiers should be simulated with URL secrecy.
+- **Backlinks and search queries**: optionally connect Search Console once a public indexed
+  site exists. Its Links report provides sampled discovered backlinks; search analytics
+  provides search terms/clicks/impressions. HTTP Referer usually cannot reveal search terms.
+- **Backup**: do not prioritize a backup service or production restore exercise right now;
+  retain portable Markdown export as a manually invoked option.
+
+**No general-public sharing, subscriptions, paid login, or Search Console OAuth**
+are authorized by this decision. Keep the Site owner-only until requested and tested.
