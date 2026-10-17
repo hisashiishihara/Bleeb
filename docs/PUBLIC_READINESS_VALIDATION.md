@@ -41,3 +41,19 @@ One fictional article is deliberately public at application level but still behi
 General-public Site access still requires the owner's explicit confirmation. The service-access tests above are app-level anonymous tests, not anonymous internet end-to-end tests. After approval, change the Site audience and immediately test unsigned/no-cookie public reads, forged headers, protected URLs/APIs/MCP, metadata, RSC and withdrawal. Restore owner-only access if a protection fails. See PUBLIC_ROLLOUT.md.
 
 The owner can review the fixture while signed in before authorizing the audience change. No custom domain, real article publishing, membership rollout or billing is part of that approval.
+
+## Approved public rollout — 2026-10-17
+
+This section supersedes the private-policy checkpoint above. The owner explicitly approved the audience change. Site access is now public (policy revision 2, updated 2026-10-17T06:01:12.953783+00:00). The deployed application/version above was unchanged.
+
+Real internet requests used no login, cookies, bypass token or owner credentials:
+- Homepage and /posts/entry-4dd37477 returned 200; the article contained only published revision 1 (星の図書館A).
+- Adding ?revision=2 still returned published revision 1, never the private revision marker.
+- Existing private draft permalink, /owner/archive, historic revision URL, /owner/referrers, /owner/members and /account returned 404 without private content.
+- All seven owner action APIs returned 403 both unsigned and with forged authenticated-user ID/email headers. MCP tools/call returned 401 in both cases. Disabled membership APIs returned 404 without writes.
+- Forged RSC/prefetch requests to owner archive/detail/referrers redirected once and returned 404, private/no-store, without private content.
+- Withdrawing the fictional public fixture through authenticated owner MCP immediately removed it from the list and made its permalink return 404. Republishing explicit revision 1 with visibility public returned 200 again, without redeployment; revision 2 remained private.
+- Reader responses were no-store/must-revalidate; protected/404 responses were private/no-store. No public cache was enabled.
+- Authenticated owner MCP list/export/withdraw/publish continued to work after the policy change. Export comparison confirmed the previous three entries and seven revisions were byte-for-byte unchanged in their exported records.
+
+The fictional fixture remains public at revision 1 for browser verification. The previous three articles remain private drafts. No migration, reset, application redeployment, domain change, referrer collection, registration, payment or real-article publishing occurred during this rollout.
