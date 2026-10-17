@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
+import { MediaMarkdown } from "../../../components/media-markdown";
 import { database } from "../../../../lib/store";
 import { requireOwnerPage } from "../../../../lib/owner-page";
 import { getOwnerArchiveEntry } from "../../../../lib/owner-archive";
@@ -25,9 +25,10 @@ export default async function PrivateEntry({params,searchParams}:Props){
     <h1>{content.title}</h1>
     <p className="owner-lead">{entry.status==="draft"?"非公開の下書き":"記事として公開中"} · 閲覧範囲 {entry.visibility} · 最新 r{entry.latest_revision} · 公開版 {entry.published_revision===null?"なし":"r"+entry.published_revision}</p>
     <p className="owner-lead">このリビジョン: {date(content.saved_at)} {isPublic?"（現在の公開版）":"（閲覧は本人限定）"}</p>
+    <p><a className="back-link" href={"/owner/archive/"+encodeURIComponent(id)+"/edit"}>✎ この文章を編集する（最新版から新規リビジョンを作成） →</a></p>
     <div className="revision-links"><strong>履歴を読む</strong>
       {history.map(item=><a key={item.revision} aria-current={content.revision===item.revision?"page":undefined} href={"/owner/archive/"+encodeURIComponent(id)+"?revision="+item.revision}>r{item.revision}</a>)}
     </div>
-    <div className="prose"><ReactMarkdown skipHtml>{content.body_md}</ReactMarkdown></div>
+    <div className="prose"><MediaMarkdown body={content.body_md}/></div>
   </article>;
 }

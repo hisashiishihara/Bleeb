@@ -17,6 +17,7 @@ export default defineConfig(async () => {
         config: {
           main: "vinext/server/fetch-handler",
           compatibility_flags: ["nodejs_compat"],
+          r2_buckets: [{ binding: "MEDIA", bucket_name: "ai-diary-local-media" }],
           d1_databases: [{
             binding: d1,
             database_name: "ai-diary-local",

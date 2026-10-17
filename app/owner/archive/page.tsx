@@ -24,6 +24,7 @@ export default async function OwnerArchive({searchParams}:Props){
     <p className="eyebrow">OWNER / PRIVATE</p>
     <h1>自分のアーカイブ</h1>
     <p className="owner-lead">下書き・公開記事・過去リビジョンも含む個人用の記録。ここは本人専用です。</p>
+    <p><a className="editor-create-link" href="/owner/new">＋ 新しい記事を書く</a></p>
     <nav className="owner-tabs"><a href="/owner/archive" aria-current="page">記事を探す</a><a href="/owner/referrers">リンク元</a><a href="/">公開ブログ</a></nav>
     <form method="get" action="/owner/archive" className="archive-search">
       <label>キーワード<input name="q" maxLength={100} placeholder="タイトル・本文・過去の文章を検索" defaultValue={filters.q}/></label>
@@ -40,6 +41,7 @@ export default async function OwnerArchive({searchParams}:Props){
         {(filters.q||filters.tag)&&<p>r{e.matched_revision} に一致{e.matched_revision!==e.latest_revision?"（過去のリビジョン）":""}</p>}
         <h3><a href={"/owner/archive/"+encodeURIComponent(e.id)+"?revision="+e.matched_revision}>{e.title}</a></h3>
         {e.summary&&<p>{e.summary}</p>}
+        <p><a className="editor-edit-link" href={"/owner/archive/"+encodeURIComponent(e.id)+"/edit"}>✎ Markdown を編集</a></p>
         {tags(e.tags_json).map(tag=><span className="tag" key={tag}>{tag}</span>)}
       </article>)}</div>}
     {hasMore&&<a className="back-link" href={"/owner/archive?"+next.toString()}>さらに表示 →</a>}

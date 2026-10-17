@@ -1,4 +1,4 @@
-import ReactMarkdown from "react-markdown";
+import { MediaMarkdown } from "../../components/media-markdown";
 import { ReferrerPing } from "../../components/referrer-ping";
 import { notFound } from "next/navigation";
 import { database, publicEntry } from "../../../lib/store";
@@ -30,7 +30,7 @@ export default async function Post({params}:Props) {
         {item.summary && <p className="article-summary">{item.summary}</p>}
         <div className="article-meta"><span>公開 {jpDate(item.published_at)}</span><span>更新 {jpDate(item.updated_at)}</span></div>
       </header>
-      <div className="prose"><ReactMarkdown skipHtml>{item.body_md}</ReactMarkdown></div>
+      <div className="prose"><MediaMarkdown body={item.body_md}/></div>
       <a className="back-link lower" href="/">← 記事一覧へ</a>
     </article>
   );
