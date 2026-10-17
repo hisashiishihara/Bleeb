@@ -46,3 +46,31 @@ The available management tools do not expose the stored App tool descriptors, pe
 ## Preservation
 
 Existing Site URL, canonical plugin ID, connection endpoint, owner authorization, DB and MEDIA bindings and audience policy are retained. No migrations, article mutations, media mutations or publishing tools were called during diagnosis. The deployment updates diagnostic code only. No file URLs, credentials, article contents, or personal image bytes are included in this report.
+
+
+## Follow-up: native fileParams bridge became callable (2026-10-17)
+
+The connected ChatGPT conversation later exposed all 13 tools, including
+`upload_chatgpt_image`; this was confirmed from the callable tool inventory
+and did **not** require making another deployment. The prior 12-tool
+discrepancy no longer reproduces in that conversation. Its original cause
+(registration lag, presentation caching, or other hosting behavior) remains
+unproven.
+
+The owner invoked the actual new tool with a previously generated 1672×941
+PNG, ~2.7 MB, targeting an unpublished fictional article with `usage=inline`.
+The file reached the plugin interface, but the operation failed before
+storing an R2 object with `Only PNG, JPEG, GIF and WebP are supported`.
+The file itself is a valid PNG; the file handoff reported its MIME as
+`application/octet-stream`, which the original transport adapter rejected
+before download.
+
+A follow-up source fix now treats only ChatGPT fileParams octet-stream
+metadata as *untyped*, downloads it under the existing strict HTTPS
+host allowlist, bounded size, no-credentials/no-referrer and redirect policy,
+then detects actual PNG/JPEG/GIF/WebP from magic bytes. Ordinary
+`import_media_from_url` retains strict image-MIME enforcement.
+
+**Still pending:** Deploy the MIME fix to the existing Site and retry an
+actual fileParams upload. Calling the tool and reaching MIME validation is
+not proof of successful file download or R2 persistence.
