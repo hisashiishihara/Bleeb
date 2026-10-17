@@ -50,7 +50,7 @@ Official docs:
 
 ## 3. Data model
 
-Draft revisions and published revisions must be distinct. A post stays public at revision N while the author edits N+1 privately.
+Draft articles and published articles have distinct audience states. A post already in published status displays its newest saved revision immediately; no audience expansion is inferred from saving.
 
 Proposed SQLite-compatible schema, to adapt to D1 runtime:
 
@@ -104,11 +104,11 @@ CREATE INDEX idx_entries_status_published
 - Create draft: entries.status=draft, latest_revision=1, published_revision=NULL.
 - Update draft: append revision, increment latest_revision; no public effect.
 - Publish: explicitly set published_revision to a saved revision, status=published, and published_at in one durable operation.
-- Update published article: append a newer *unpublished* revision; public route still renders published_revision.
-- Publish newer revision: atomically switch published_revision.
+- Update published article: append a new saved revision; the reader route immediately renders latest_revision at the existing authorized audience.
+- Publish latest revision: record explicit initial publication or an audience change; old revisions cannot replace the latest display without being resaved as a newer revision.
 - Unpublish: status=draft and published_revision=NULL; retain internal revisions. The public route returns 404/410.
 
-A later future revision must not become public solely because another old revision was published.
+A new saved revision of an already-published article becomes visible to its existing audience, but the entry's visibility is never expanded implicitly. A draft can never become publicly readable through save alone.
 
 ## 4. Author tool contract
 
@@ -127,7 +127,7 @@ export_entries(entry_ids?, include_drafts?, format="markdown")
 Expected behavior:
 
 - Every mutating invocation requires server-verified owner authorization.
-- Publishing or unpublishing is never inferred from save_draft/update_entry.
+- Initial publishing/unpublishing and audience changes are never inferred from save_draft/update_entry; however, editing an already-published article updates its displayed version.
 - Only acknowledge success after the committed D1 operation returns.
 - For stale revisions return conflict with current revision, rather than overwriting.
 - Replayed request IDs return the original result, not a second mutation.
@@ -142,12 +142,12 @@ The Site should implement public read-only routes, approximately:
 
 ~~~text
 GET /                   -> newest published posts
-GET /posts/{slug}       -> published revision only
+GET /posts/{slug}       -> latest revision for published entries after audience check
 GET /archive            -> date archive (optional MVP)
 GET /health             -> non-sensitive health status (optional)
 ~~~
 
-For each public read, query only entries with status=published and a non-null published_revision, and join the matching entry_revisions row. No draft content, draft revision count, secret, author token, or unpublished metadata should leak into public HTML, JSON, preview tags, search indexes, or page caches.
+For each public read, query only entries with status=published and a non-null published_revision, then join entry_revisions at latest_revision after enforcing audience permissions. No draft content, draft revision count, secret, author token, or unpublished metadata should leak into public HTML, JSON, preview tags, search indexes, or page caches.
 
 Start with server-rendered semantic article HTML where supported; otherwise prove equivalent accessible output and search/share metadata. Use published-revision-aware caching (short TTL or invalidation on publish). Public content can be cached; owner-authorized responses must be private/no-store.
 
@@ -194,7 +194,7 @@ Start with server-rendered semantic article HTML where supported; otherwise prov
 - personal plugin installation and authenticated tool invocation
 - anonymous public read of a published article
 - not-found for guessed draft URL and unpublished newer revisions
-- new publish visible without frontend redeployment
+- new publish or save to already-published content visible without frontend redeployment
 - public cache invalidation / documented delay
 - browser/mobile display and share metadata
 
@@ -226,7 +226,7 @@ RSS/Atom feed, tags/search indexes, topic timelines, context extraction for futu
 
 ## Article access update (2026-10-17)
 
-[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select only the published revision after audience authorization; drafts and history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.
+[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select the latest revision of status=published entries after audience authorization; drafts and history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.
 
 
 ## Current operation update (2026-10-17)
