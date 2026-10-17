@@ -17,7 +17,7 @@ export function configuredImageHosts(raw:string|undefined):ImageHostPolicy {
  }
  return hosts;
 }
-export function validateImageSource(value:string,allowed:ImageHostPolicy,maxUrlLength=2048):URL {
+export function validateImageSource(value:string,allowed:ImageHostPolicy,maxUrlLength=2048,diagnosticHost=false):URL {
  if(allowed.length===0)throw new DiaryError("image_source_unconfigured","Allowed image source hosts are not configured",503);
  if(typeof value!=="string"||value.length>maxUrlLength)throw new DiaryError("invalid_image_url","Invalid image URL");
  let url:URL;
@@ -33,15 +33,15 @@ export function validateImageSource(value:string,allowed:ImageHostPolicy,maxUrlL
  const authorized=allowed.some(pattern=>pattern.startsWith("*.")
    ?h.endsWith(pattern.slice(1))&&h!==pattern.slice(2)
    :h===pattern);
- if(!authorized)throw new DiaryError("image_host_not_allowed","Image host is not on the configured allowlist",403);
+ if(!authorized)throw new DiaryError("image_host_not_allowed",diagnosticHost ? "ChatGPT file transfer hostname is not allowed: "+h : "Image host is not on the configured allowlist",403);
  url.hash="";
  return url;
 }
 export async function downloadImage(
  sourceUrl:string,allowlist:ImageHostPolicy,fetcher:typeof fetch=fetch,
- options:{maxUrlLength?:number;expectedType?:string;allowUnknownMIME?:boolean}={}
+ options:{maxUrlLength?:number;expectedType?:string;allowUnknownMIME?:boolean;diagnosticHost?:boolean}={}
 ):Promise<{image:File;final_host:string}> {
- let url=validateImageSource(sourceUrl,allowlist,options.maxUrlLength);
+ let url=validateImageSource(sourceUrl,allowlist,options.maxUrlLength,options.diagnosticHost);
  for(let hop=0;hop<=MAX_HOPS;hop++){
   let response:Response;
   try {
@@ -56,7 +56,7 @@ export async function downloadImage(
    if(hop===MAX_HOPS)throw new DiaryError("too_many_redirects","Too many image redirects",422);
    const location=response.headers.get("location");
    if(!location)throw new DiaryError("invalid_redirect","Image redirect missing destination",422);
-   url=validateImageSource(new URL(location,url).toString(),allowlist,options.maxUrlLength);
+   url=validateImageSource(new URL(location,url).toString(),allowlist,options.maxUrlLength,options.diagnosticHost);
    continue;
   }
   if(!response.ok||!response.body){
