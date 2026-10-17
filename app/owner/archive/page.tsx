@@ -24,7 +24,7 @@ export default async function OwnerArchive({searchParams}:Props){
     <p className="eyebrow">OWNER / PRIVATE</p>
     <h1>自分のアーカイブ</h1>
     <p className="owner-lead">下書き・公開記事・過去リビジョンも含む個人用の記録。ここは本人専用です。</p>
-    <nav className="owner-tabs"><a href="/owner/archive" aria-current="page">記事を探す</a><a href="/owner/referrers">リンク元</a><a href="/owner/members">会員管理</a><a href="/">公開ブログ</a></nav>
+    <nav className="owner-tabs"><a href="/owner/archive" aria-current="page">記事を探す</a><a href="/owner/referrers">リンク元</a><a href="/">公開ブログ</a></nav>
     <form method="get" action="/owner/archive" className="archive-search">
       <label>キーワード<input name="q" maxLength={100} placeholder="タイトル・本文・過去の文章を検索" defaultValue={filters.q}/></label>
       <label>状態<select name="status" defaultValue={filters.status}>

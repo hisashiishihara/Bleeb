@@ -21,6 +21,7 @@ const {POST:admin}=await import("../app/api/owner/members/route.ts");
 const {POST:mcp}=await import("../app/mcp/route.ts");
 const {searchOwnerArchive,getOwnerArchiveEntry}=await import("../lib/owner-archive.ts");
 const {tools}=await import("../plugin/tool-definitions.ts");
+const {POST:ownerApi}=await import("../app/api/owner/[action]/route.ts");
 function fixture(){
   const sqlite=new DatabaseSync(":memory:");
   for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
@@ -36,85 +37,84 @@ const req=()=>"access-test-"+(++sequence);
 const identity=id=>({id,email:id+"@example.invalid"});
 const ownerHeaders={"oai-authenticated-user-id":"verified-owner","oai-authenticated-user-email":"owner@example.invalid"};
 
-test("all 16 viewer/audience combinations, private revisions, instant audience changes and expiration",async()=>{
+
+test("owner/public matrix blocks drafts, unreleased revisions, legacy member scopes and immediate restrictions",async()=>{
  const {db,sqlite}=fixture();
  try {
-  await registerMember(db,identity("free"));await registerMember(db,identity("paid"));
+  // Stored memberships are retained, but cannot grant access while suspended.
+  await registerMember(db,identity("paid"));
   await setMembership(db,{user_id:"paid",tier:"paid",active:true,paid_active:true,paid_until:"2099-01-01T00:00:00Z"});
-  const viewers=[await resolveViewer(db,identity("owner"),true),await resolveViewer(db,identity("paid"),false),await resolveViewer(db,identity("free"),false),await resolveViewer(db,null,false)];
-  const allowed={owner:[true,false,false,false],paid:[true,true,false,false],registered:[true,true,true,false],public:[true,true,true,true]};
-  for(const audience of Object.keys(allowed)){
-   const entry=await store.saveDraft(db,{title:"架空 "+audience,body_md:"saved public candidate",request_id:req()});
-   assert.equal(entry.visibility,"owner");
-   await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:audience,request_id:req()});
-   await store.updateEntry(db,{entry_id:entry.entry_id,expected_revision:1,title:"UNPUBLISHED SECRET TITLE",body_md:"UNPUBLISHED SECRET BODY",request_id:req()});
-   for(let i=0;i<viewers.length;i++){
-    const result=await readableEntry(db,entry.slug,viewers[i]);
-    assert.equal(!!result,allowed[audience][i],audience+" viewer "+i);
-    if(result){assert.equal(result.body_md,"saved public candidate");assert.ok(!result.title.includes("SECRET"));}
-    const list=await readableEntries(db,viewers[i]);
-    assert.equal(list.some(x=>x.slug===entry.slug),allowed[audience][i]);
-    assert.ok(!JSON.stringify(list).includes("SECRET"));
-   }
-   await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"owner",request_id:req()});
-   assert.equal(await readableEntry(db,entry.slug,viewers[1]),null);
-   const legacy=await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,request_id:req()});
-   assert.equal(legacy.visibility,"owner");
-   await assert.rejects(store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"everyone",request_id:req()}));
-   await store.unpublishEntry(db,{entry_id:entry.entry_id,request_id:req()});
-   const saved=await store.getEntry(db,{entry_id:entry.entry_id});assert.equal(saved.entry.visibility,"owner");assert.equal(saved.entry.published_revision,null);
-   assert.equal(await readableEntry(db,entry.slug,viewers[0]),null); // drafts are read via owner archive
-   const archive=await getOwnerArchiveEntry(db,entry.entry_id,2);assert.equal(archive.content.body_md,"UNPUBLISHED SECRET BODY");
+  assert.deepEqual(await resolveViewer(db,identity("paid"),false),{owner:false,registered:false,paid:false});
+  const owner=await resolveViewer(db,identity("owner"),true);
+  const anon=await resolveViewer(db,null,false);
+  const fakeClaims={owner:false,registered:true,paid:true};
+  const entry=await store.saveDraft(db,{title:"PRIVATE DRAFT TITLE",body_md:"PRIVATE DRAFT BODY",request_id:req()});
+  assert.equal(entry.visibility,"owner");
+  await db.prepare("UPDATE entries SET visibility='public' WHERE id=?").bind(entry.entry_id).run();
+  assert.equal(await readableEntry(db,entry.slug,anon),null);
+  assert.equal((await readableEntries(db,anon)).length,0);
+  assert.equal((await getOwnerArchiveEntry(db,entry.entry_id)).content.body_md,"PRIVATE DRAFT BODY");
+  await store.updateEntry(db,{entry_id:entry.entry_id,expected_revision:1,title:"PUBLIC TITLE",body_md:"PUBLIC BODY",request_id:req()});
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"public",request_id:req()});
+  await store.updateEntry(db,{entry_id:entry.entry_id,expected_revision:2,title:"UNRELEASED SECRET TITLE",body_md:"UNRELEASED SECRET BODY",request_id:req()});
+  for(const viewer of [owner,anon,fakeClaims]){
+   const result=await readableEntry(db,entry.slug,viewer);
+   assert.equal(result.body_md,"PUBLIC BODY");
+   assert.equal(result.title,"PUBLIC TITLE");
+   assert.ok(!JSON.stringify(await readableEntries(db,viewer)).includes("SECRET"));
   }
-  const expiring=await store.saveDraft(db,{title:"架空期限",body_md:"paid lifetime fixture",request_id:req()});
-  await store.publishEntry(db,{entry_id:expiring.entry_id,revision:1,visibility:"paid",request_id:req()});
-  const expired=await resolveViewer(db,identity("paid"),false,Date.parse("2099-01-01T00:00:00Z"));
-  assert.equal(expired.paid,false);
-  assert.equal(expired.registered,true);
-  assert.equal(await readableEntry(db,expiring.slug,expired),null);
-  await setMembership(db,{user_id:"paid",tier:"paid",active:true,paid_active:false});
-  assert.deepEqual(await resolveViewer(db,identity("paid"),false),{owner:false,registered:true,paid:false});
-  await registerMember(db,identity("paid"));assert.equal((await resolveViewer(db,identity("paid"),false)).paid,false);
-  await setMembership(db,{user_id:"free",tier:"registered",active:false,paid_active:false});
-  await registerMember(db,identity("free"));assert.equal((await resolveViewer(db,identity("free"),false)).registered,false);
-  assert.deepEqual(await resolveViewer(db,identity("unregistered"),false),{owner:false,registered:false,paid:false});
-  assert.equal((await searchOwnerArchive(db,{q:"UNPUBLISHED SECRET BODY"})).entries.length,4);
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"owner",request_id:req()});
+  for(const viewer of [anon,fakeClaims]) assert.equal(await readableEntry(db,entry.slug,viewer),null);
+  assert.equal((await readableEntry(db,entry.slug,owner)).body_md,"PUBLIC BODY");
+  assert.equal((await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,request_id:req()})).visibility,"owner");
+  for(const legacy of ["paid","registered"]){
+   await assert.rejects(store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:legacy,request_id:req()}));
+   await db.prepare("UPDATE entries SET visibility=? WHERE id=?").bind(legacy,entry.entry_id).run();
+   assert.equal(await readableEntry(db,entry.slug,fakeClaims),null);
+   assert.equal((await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,request_id:req()})).visibility,"owner");
+  }
+  assert.equal((await searchOwnerArchive(db,{q:"UNRELEASED SECRET BODY"})).entries[0].matched_revision,3);
+  await store.unpublishEntry(db,{entry_id:entry.entry_id,request_id:req()});
+  const final=await store.getEntry(db,{entry_id:entry.entry_id});
+  assert.equal(final.entry.visibility,"owner");assert.equal(final.entry.published_revision,null);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id,revision:1})).revision.body_md,"PRIVATE DRAFT BODY");
  }finally{sqlite.close();}
 });
 
-test("registration derives identity from Sites, refuses self-upgrades and protects membership management",async()=>{
+test("membership endpoints are inert, even for authenticated owner; owner APIs reject cross-origin calls",async()=>{
  const {db,sqlite}=fixture();
  try {
   const base="https://test.example.invalid";
-  const request=(path,data,headers={})=>new Request(base+path,{method:"POST",headers:{Origin:base,"Content-Type":"application/json",...headers},body:JSON.stringify(data)});
-  assert.equal((await registration(request("/api/membership",{action:"register"}))).status,401);
-  assert.equal((await registration(request("/api/membership",{action:"register",tier:"paid",user_id:"owner"},{"oai-authenticated-user-id":"free"}))).status,400);
-  assert.equal((await registration(request("/api/membership",{action:"register"},{"oai-authenticated-user-id":"free"}))).status,303);
-  assert.equal((await resolveViewer(db,identity("free"),false)).paid,false);
-  assert.equal((await registration(request("/api/membership",{action:"register"},{Origin:"https://evil.invalid","oai-authenticated-user-id":"free"}))).status,403);
-  const upgrade={user_id:"free",tier:"paid",active:true,paid_active:true,paid_until:"2099-01-01T00:00:00Z"};
-  assert.equal((await admin(request("/api/owner/members",upgrade,{"oai-authenticated-user-id":"free","oai-authenticated-user-email":"free@example.invalid"}))).status,403);
-  assert.equal((await admin(request("/api/owner/members",upgrade,ownerHeaders))).status,303);
-  assert.equal((await resolveViewer(db,identity("free"),false)).paid,true);
-  assert.equal((await admin(request("/api/owner/members",upgrade,{...ownerHeaders,Origin:"https://evil.invalid"}))).status,403);
+  const request=(data,headers={})=>new Request(base+"/api/membership",{method:"POST",headers:{Origin:base,"Content-Type":"application/json",...headers},body:JSON.stringify(data)});
+  for(const headers of [{},ownerHeaders,{"oai-authenticated-user-id":"paid"}]){
+   assert.equal((await registration(request({action:"register"},headers))).status,404);
+   assert.equal((await admin(request({user_id:"paid",tier:"paid",active:true,paid_active:true},headers))).status,404);
+  }
+  assert.equal((await db.prepare("SELECT count(*) AS n FROM members").first()).n,0);
+  const context={params:Promise.resolve({action:"list_entries"})};
+  assert.equal((await ownerApi(request({}, {...ownerHeaders,Origin:"https://evil.invalid"}),context)).status,403);
+  assert.equal((await ownerApi(request({},ownerHeaders),context)).status,200);
  }finally{sqlite.close();}
 });
 
-test("all seven MCP operations keep owner authorization and support explicit visibility",async()=>{
+test("seven MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
  const {sqlite}=fixture();
  try {
   assert.equal(tools.length,7);
+  assert.deepEqual(tools.find(t=>t.name==="publish_entry").inputSchema.properties.visibility.enum,["owner","public"]);
   const call=async(name,args,headers=ownerHeaders)=>{
    const response=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers,body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:args}})}));
    return (await response.json()).result;
   };
-  for(const tool of tools) assert.equal((await call(tool.name,{},{})).isError,true);
-  let result=await call("save_draft",{title:"架空MCP",body_md:"first",request_id:req()});const entry=JSON.parse(result.content[0].text);
-  assert.ok(!(await call("list_entries",{})).isError);
-  assert.ok(!(await call("get_entry",{entry_id:entry.entry_id})).isError);
+  for(const tool of tools)for(const headers of [{},{"oai-authenticated-user-id":"user"},{"oai-authenticated-user-email":"owner@example.invalid"},{"oai-authenticated-user-id":"other","oai-authenticated-user-email":"other@example.invalid"}]){
+   assert.equal((await call(tool.name,{},headers)).isError,true);
+  }
+  const entry=JSON.parse((await call("save_draft",{title:"架空MCP",body_md:"first",request_id:req()})).content[0].text);
+  for(const name of ["list_entries","get_entry"]) assert.ok(!(await call(name,{entry_id:entry.entry_id})).isError);
   assert.ok(!(await call("update_entry",{entry_id:entry.entry_id,expected_revision:1,title:"架空MCP",body_md:"second",request_id:req()})).isError);
-  for(const v of ["owner","paid","registered","public"]){
-   result=await call("publish_entry",{entry_id:entry.entry_id,revision:1,visibility:v,request_id:req()});assert.equal(JSON.parse(result.content[0].text).visibility,v);
+  for(const v of ["owner","public"]){
+   const result=await call("publish_entry",{entry_id:entry.entry_id,revision:1,visibility:v,request_id:req()});
+   assert.equal(JSON.parse(result.content[0].text).visibility,v);
   }
   assert.ok(!(await call("export_entries",{include_drafts:true})).isError);
   assert.ok(!(await call("unpublish_entry",{entry_id:entry.entry_id,request_id:req()})).isError);

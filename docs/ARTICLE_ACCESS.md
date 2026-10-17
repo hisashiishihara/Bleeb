@@ -42,3 +42,8 @@ Before a public rollout, separately authorize the Site audience change and test 
 ## Payments
 
 Payment provider, checkout, verified webhook signature validation, subscription reconciliation, cancellations/refunds, and audit trail for billing events remain unimplemented. A future integration must update server-side entitlement records only after verified provider events. ChatGPT Plus/Pro is unrelated to aiDiary membership.
+
+
+## Current operation update (2026-10-17)
+
+Only owner/public audiences are active. Membership registration, membership management and billing are suspended. Existing schema/data are preserved. PUBLIC_ROLLOUT.md supersedes earlier active member/audience plans; changing the Sites audience to public requires explicit owner confirmation.

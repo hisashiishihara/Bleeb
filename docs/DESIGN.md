@@ -227,3 +227,8 @@ RSS/Atom feed, tags/search indexes, topic timelines, context extraction for futu
 ## Article access update (2026-10-17)
 
 [ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select only the published revision after audience authorization; drafts and history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.
+
+
+## Current operation update (2026-10-17)
+
+Only owner/public audiences are active. Membership registration, membership management and billing are suspended. Existing schema/data are preserved. PUBLIC_ROLLOUT.md supersedes earlier active member/audience plans; changing the Sites audience to public requires explicit owner confirmation.

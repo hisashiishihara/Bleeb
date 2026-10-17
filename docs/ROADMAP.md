@@ -146,3 +146,8 @@ are authorized by this decision. Keep the Site owner-only until requested and te
 ## Four audiences and membership (2026-10-17)
 
 Implemented: owner/paid/registered/public visibility, migration 0002, explicit free registration, owner-only membership administration, server-side entitlement expiry, shared reader SQL gates, no-store responses, and backwards-compatible publish_entry audience selection. The 4x4 matrix runs in isolation; non-owner hosted login remains unverified under the intentionally owner-only Site policy. See ARTICLE_ACCESS.md and ACCESS_VALIDATION.md. Payments and public rollout remain separate future work.
+
+
+## Current operation update (2026-10-17)
+
+Only owner/public audiences are active. Membership registration, membership management and billing are suspended. Existing schema/data are preserved. PUBLIC_ROLLOUT.md supersedes earlier active member/audience plans; changing the Sites audience to public requires explicit owner confirmation.

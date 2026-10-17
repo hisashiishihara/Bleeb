@@ -148,7 +148,7 @@ export async function publishEntry(db: DB, args: unknown) {
   if (!candidate) throw new DiaryError("not_found", "Saved revision not found", 404);
   const now = NOW();
   // Omitted audience preserves current scope; old clients never broaden it.
-  const audience = visibility(a.visibility === undefined ? entry.visibility ?? "owner" : a.visibility);
+  const audience = visibility(a.visibility === undefined ? (entry.visibility === "public" ? "public" : "owner") : a.visibility);
   const response = { entry_id: id, slug: entry.slug, status: "published", revision: rev, visibility: audience, public_path: "/posts/" + entry.slug };
   return mutate(db, req, "publish_entry", response, [
     db.prepare("UPDATE entries SET status='published',visibility=?,published_revision=?,published_at=?,updated_at=? WHERE id=?")

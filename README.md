@@ -6,7 +6,7 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 
 ## Implementation
 
-- Four article audiences (`owner`, `paid`, `registered`, `public`), explicit free registration at `/account`, and owner-only membership management at `/owner/members`. See [article access and membership](docs/ARTICLE_ACCESS.md). The deployed Site stays owner-private; no payment provider is connected.
+- Active article audiences are `owner` and `public` only. Membership and payment development are suspended; registration/management endpoints are disabled and their stored data is retained. See [public rollout and approval gate](docs/PUBLIC_ROLLOUT.md). The Site stays owner-private until explicitly approved for general access.
 
 - `/owner/archive`: authenticated private research archive, including drafts, historical full-text search, tags, and revision reading.
 - `/owner/referrers`: private referral report; public-article referral aggregates are opt-in and off by default (see [access and referrer design](docs/ACCESS_AND_REFERRERS.md)).

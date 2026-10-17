@@ -1,6 +1,6 @@
 import { DiaryError } from "./input.ts";
 
-export const VISIBILITIES = ["owner", "paid", "registered", "public"] as const;
+export const VISIBILITIES = ["owner", "public"] as const;
 export type Visibility = typeof VISIBILITIES[number];
 export type Identity = { id: string; email: string | null };
 export type Viewer = { owner: boolean; registered: boolean; paid: boolean };
@@ -16,22 +16,15 @@ export function ownerIdentity(identity:Identity|null, email:string|undefined): b
   return !!identity?.email && !!email && identity.email.trim().toLowerCase() === email.trim().toLowerCase();
 }
 export function visibility(value:unknown): Visibility {
-  if (!VISIBILITIES.includes(value as Visibility)) throw new DiaryError("invalid_visibility","Choose owner, paid, registered or public",400);
+  if (!VISIBILITIES.includes(value as Visibility)) throw new DiaryError("invalid_visibility","Choose owner or public",400);
   return value as Visibility;
 }
 export async function resolveViewer(db:D1Database, identity:Identity|null, owner:boolean, now=Date.now()): Promise<Viewer> {
-  if (owner && identity) return {owner:true,registered:true,paid:true};
-  if (!identity) return anonymous;
-  const member=await db.prepare("SELECT * FROM members WHERE user_id=?").bind(identity.id).first<Member>();
-  const registered=member?.active===1;
-  const paid=registered && member?.tier==="paid" && member.paid_active===1 &&
-    (member.paid_until===null || (Number.isFinite(Date.parse(member.paid_until)) && Date.parse(member.paid_until)>now));
-  return {owner:false,registered,paid};
+  // Membership is suspended. Retain data but grant no member privileges.
+  return owner && identity ? {owner:true,registered:false,paid:false} : anonymous;
 }
 /** Constant SQL, never assembled from client-controlled identifiers or claims. */
 export function audienceSql(viewer:Viewer): string {
   if (viewer.owner) return "1=1";
-  if (viewer.registered && viewer.paid) return "e.visibility IN ('paid','registered','public')";
-  if (viewer.registered) return "e.visibility IN ('registered','public')";
   return "e.visibility='public'";
 }
