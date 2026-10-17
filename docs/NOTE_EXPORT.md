@@ -25,9 +25,10 @@ https://www.help-note.com/hc/ja/articles/16143759138329-インポート機能の
   requests return 404. No external API calls, D1 changes or R2 changes occur.
 - The editor blocks exports while local edits are unsaved. The download also checks
   the expected latest revision number; stale requests return 409.
-- A source link is appended **only** when the exported revision is the current
-  public published revision (status=published, visibility=public). It is absent
-  for drafts, owner-only posts or unreleased newer revisions.
+- A source link is appended **only** when the exported revision is the newest
+  saved revision of an already-published public article (status=published,
+  visibility=public). It is absent for drafts, owner-only posts or stale exports.
+  The historical published_revision pointer does not control reader content.
 - No changes to the original article, tags, history, visibility, or publication.
 - HTML is escaped and unsafe link schemes are not emitted.
 - Image references are placeholders, not remote media URLs. Private R2 assets are
