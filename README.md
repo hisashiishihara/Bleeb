@@ -1,5 +1,7 @@
 # aiDiary
 
+**Site title:** 「観測と思考」 — a reader-facing personal journal with a pure white editorial design. **aiDiary** remains the software/engine name, independently reusable by other authors. The Site must be redeployed separately after a source change; title/theme changes never publish or modify entries.
+
 Conversation-first personal publishing: privately save and revise Markdown from ChatGPT, then **explicitly publish** selected revisions to a readable Japanese technical blog.
 
 **Status (2026-10-17):** The owner Site has validated authenticated MCP operations. GitHub source now declares thirteen owner MCP tools, including working Base64 `upload_media` and the new `upload_chatgpt_image` fileParams bridge for ChatGPT-generated images. The native fileParams path still requires real-site validation after deployment. See [MCP upload gate](docs/MCP_UPLOAD_MEDIA.md). New additions to GitHub do not automatically deploy to Sites.
