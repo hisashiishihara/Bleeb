@@ -36,6 +36,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
  const navigating=useRef(false);
+ const mediaInput=useRef<HTMLInputElement>(null);
 
  useEffect(()=>{
   if(!dirty)return;
@@ -151,12 +152,19 @@ export function MarkdownEditor({initial}:{initial:Initial}){
        <textarea className="editor-textarea" spellCheck={false} value={body} onChange={e=>update(setBody)(e.target.value)}
          placeholder={"## 見出し\n\nここにMarkdownで本文を入力"} maxLength={150000} required/>}
      <div className="editor-toolbar">
-       <label className="file-upload">
-         {uploading?"アップロード中…":"画像・動画をアップロード"}
-         <input type="file" disabled={!initial.id||uploading||busy}
+       <button type="button" className="ghost" disabled={uploading||busy}
+         onClick={()=>{
+           if(!initial.id){
+             setError("画像・動画を追加するには、先に「非公開下書きを作成」を押してください。保存後の編集画面でファイルを選択できます。");
+             return;
+           }
+           mediaInput.current?.click();
+         }}>
+         {uploading?"アップロード中…":initial.id?"画像・動画を選択":"画像・動画を追加（先に下書きを保存）"}
+       </button>
+         <input ref={mediaInput} hidden type="file" disabled={uploading||busy}
            accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
            onChange={e=>{void upload(e.target.files?.[0]);e.target.value="";}}/>
-       </label>
        <span className="editor-hint">{initial.id?"画像10MiB・動画24MiBまで（本文にMarkdownを追記）":"先に下書きを保存するとアップロードできます。"}</span>
      </div>
      <div className="editor-actions">
@@ -181,3 +189,4 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    </section>}
  </section>;
 }
+
