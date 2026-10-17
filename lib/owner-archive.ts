@@ -6,6 +6,7 @@ export type ArchiveItem = {
   slug: string;
   status: "draft" | "published";
   latest_revision: number;
+  matched_revision: number;
   published_revision: number | null;
   updated_at: string;
   title: string;
@@ -22,19 +23,20 @@ export function archiveFilters(input: {q?:string;status?:string;tag?:string;offs
 export async function searchOwnerArchive(db:DB, input:{q?:string;status?:string;tag?:string;offset?:number}) {
   const filter = archiveFilters(input);
   const where: string[] = [];
+  const revisionWhere: string[] = ["s.entry_id=e.id"];
   const params: (string|number)[] = [];
-  if (filter.status !== "all") { where.push("e.status=?"); params.push(filter.status); }
   if (filter.q) {
-    where.push("EXISTS (SELECT 1 FROM entry_revisions s WHERE s.entry_id=e.id AND (instr(s.title,?)>0 OR instr(s.body_md,?)>0 OR instr(coalesce(s.summary,''),?)>0))");
+    revisionWhere.push("(instr(s.title,?)>0 OR instr(s.body_md,?)>0 OR instr(coalesce(s.summary,''),?)>0)");
     params.push(filter.q,filter.q,filter.q);
   }
   if (filter.tag) {
-    where.push("EXISTS (SELECT 1 FROM entry_revisions t, json_each(t.tags_json) jt WHERE t.entry_id=e.id AND jt.value=?)");
+    revisionWhere.push("EXISTS (SELECT 1 FROM json_each(s.tags_json) jt WHERE jt.value=?)");
     params.push(filter.tag);
   }
+  if (filter.status !== "all") { where.push("e.status=?"); params.push(filter.status); }
   const sql =
-    "SELECT e.id,e.slug,e.status,e.latest_revision,e.published_revision,e.updated_at,r.title,r.summary,r.tags_json "+
-    "FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.latest_revision "+
+    "SELECT e.id,e.slug,e.status,e.latest_revision,e.published_revision,e.updated_at,r.revision AS matched_revision,r.title,r.summary,r.tags_json "+
+    "FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=(SELECT MAX(s.revision) FROM entry_revisions s WHERE "+revisionWhere.join(" AND ")+") "+
     (where.length ? "WHERE "+where.join(" AND ")+" " : "") +
     "ORDER BY e.updated_at DESC,e.id DESC LIMIT ? OFFSET ?";
   const rows=await db.prepare(sql).bind(...params,61,filter.offset).all<ArchiveItem>();

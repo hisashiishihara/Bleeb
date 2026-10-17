@@ -37,7 +37,8 @@ export default async function OwnerArchive({searchParams}:Props){
     {entries.length===0?<div className="empty">該当する記事はありません。</div>:<div className="archive-list">{entries.map(e=>
       <article className="archive-result" key={e.id}>
         <div className="archive-result-head"><span className={e.status==="draft"?"owner-state-draft":"owner-state-published"}>{e.status==="draft"?"下書き":"公開済み"}</span><span>{date(e.updated_at)} 更新</span><span>最新版 r{e.latest_revision}</span></div>
-        <h3><a href={"/owner/archive/"+encodeURIComponent(e.id)}>{e.title}</a></h3>
+        {(filters.q||filters.tag)&&<p>r{e.matched_revision} に一致{e.matched_revision!==e.latest_revision?"（過去のリビジョン）":""}</p>}
+        <h3><a href={"/owner/archive/"+encodeURIComponent(e.id)+"?revision="+e.matched_revision}>{e.title}</a></h3>
         {e.summary&&<p>{e.summary}</p>}
         {tags(e.tags_json).map(tag=><span className="tag" key={tag}>{tag}</span>)}
       </article>)}</div>}
