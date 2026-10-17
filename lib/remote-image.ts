@@ -11,6 +11,7 @@ export function configuredImageHosts(raw:string|undefined):ImageHostPolicy {
  for(const h of hosts){
   const value=h.startsWith("*.")?h.slice(2):h;
   if(!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(value)||value.length>253||
+    /^\d+(?:\.\d+)*$/.test(value)||RESTRICTED_SUFFIXES.some(s=>value.endsWith(s))||
     value.split(".").some(label=>label.startsWith("-")||label.endsWith("-")))
    throw new DiaryError("invalid_media_config","Invalid allowed image source hostname",503);
  }
