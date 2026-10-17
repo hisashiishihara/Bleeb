@@ -84,7 +84,7 @@ test("blocked native transfer exposes only denied hostname, never signed token",
  await assert.rejects(downloadChatGPTImage(file(url),undefined,async()=>{throw Error("must not fetch")}),
   error=>{
    assert.equal(error.code,"image_host_not_allowed");
-   assert.match(error.message,/unexpected\\.example\\.com/);
+   assert.ok(error.message.includes("unexpected.example.com"));
    assert.doesNotMatch(error.message,/secret|token=|very-secret\\.png/);
    return true;
   });
@@ -93,7 +93,7 @@ test("blocked native transfer exposes only denied hostname, never signed token",
  await assert.rejects(downloadChatGPTImage(file(),undefined,redirecting),
   error=>{
    assert.equal(error.code,"image_host_not_allowed");
-   assert.match(error.message,/redirected\\.example\\.com/);
+   assert.ok(error.message.includes("redirected.example.com"));
    assert.doesNotMatch(error.message,/hidden|credential/);
    return true;
   });
