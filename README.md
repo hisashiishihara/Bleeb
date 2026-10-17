@@ -9,6 +9,7 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 ## Implementation
 
 - Browser-based Markdown editor at `/owner/new` and `/owner/archive/{id}/edit`, supporting manual revisions, preview, explicit publish/withdraw, and private R2 media uploads.
+- **Latest-visible revisions:** after an article is explicitly published, new saved revisions (including hero updates) immediately appear to the article's *existing authorized audience*. Drafts stay private; changing visibility or unpublishing still requires an explicit owner action. `published_revision` remains a historical legacy pointer.
 - Per-article **note (MT `.txt`) export** on the owner editor offers excerpt/summary or full text; generates owner-only downloadable drafts without note API calls or publication, with public source links only when actually readable. See [note export](docs/NOTE_EXPORT.md).
 - Images and short video are stored in private R2 (`MEDIA` binding); asset metadata is stored in D1 migration `0003_media.sql`. Media are accessible anonymously **only if** referenced by the selected public published revision of their own article. See `docs/EDITOR_MEDIA.md`.
 
