@@ -36,8 +36,9 @@ export async function readableMedia(db:D1Database,id:string,owner:boolean):Promi
  const asset=await db.prepare("SELECT * FROM media_assets WHERE id=?").bind(id).first<MediaRow>();
  if(!asset)return null;
  if(owner)return asset;
+ // Permit public media only when the current visible revision references it.
  const published=await db.prepare(
-   "SELECT r.body_md,r.hero_media_id FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.published_revision "+
+   "SELECT r.body_md,r.hero_media_id FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.latest_revision "+
    "WHERE e.id=? AND e.status='published' AND e.visibility='public' AND e.published_revision IS NOT NULL"
  ).bind(asset.entry_id).first<{body_md:string;hero_media_id:string|null}>();
  return published&&(published.hero_media_id===id||referencesMedia(published.body_md,id))?asset:null;
