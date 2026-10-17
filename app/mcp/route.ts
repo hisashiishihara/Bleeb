@@ -23,6 +23,18 @@ export async function POST(request: Request) {
     try {
       authorizedOwner(request);
       const result = await dispatch(database(), rpc.params?.name, rpc.params?.arguments ?? {});
+      if (rpc.params?.name === "list_entries") {
+        // Owner-only read diagnostic. Invoke this runtime's exact tools/list
+        // handler in process, without network access, credentials, or writes.
+        const probe = await POST(new Request(request.url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "owner-diagnostic", method: "tools/list" })
+        }));
+        const observed = await probe.json() as { result?: { tools: unknown[] } };
+        Object.assign(result, { mcp_diagnostics: {
+          probe: "same-runtime-tools-list-v1", tools_list: observed.result
+        }});
+      }
       return Response.json({jsonrpc:"2.0",id,result:{content:[{type:"text",text:JSON.stringify(result)}]}}, {headers});
     } catch (error) {
       const message = error instanceof DiaryError ? error.message : "Operation failed";
@@ -33,3 +45,4 @@ export async function POST(request: Request) {
     return Response.json({jsonrpc:"2.0",id,error:{code:-32600,message:tooLarge?"Request too large":"Invalid request"}}, {status:tooLarge?413:400,headers});
   }
 }
+

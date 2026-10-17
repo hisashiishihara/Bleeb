@@ -37,6 +37,27 @@ const req=()=>"access-test-"+(++sequence);
 const identity=id=>({id,email:id+"@example.invalid"});
 const ownerHeaders={"oai-authenticated-user-id":"verified-owner","oai-authenticated-user-email":"owner@example.invalid"};
 
+test("owner read diagnostics return the exact runtime tools/list without writes",async()=>{
+ const {sqlite}=fixture();
+ try {
+  const request=(method,params,headers={})=>new Request("https://test.example.invalid/mcp",{
+   method:"POST",headers:{"Content-Type":"application/json",...headers},
+   body:JSON.stringify({jsonrpc:"2.0",id:1,method,params})
+  });
+  const direct=await (await mcp(request("tools/list"))).json();
+  const response=await (await mcp(request("tools/call",{name:"list_entries",arguments:{limit:1}},ownerHeaders))).json();
+  const result=JSON.parse(response.result.content[0].text);
+  assert.deepEqual(result.mcp_diagnostics.tools_list,direct.result);
+  assert.equal(result.mcp_diagnostics.tools_list.tools.length,13);
+  const image=result.mcp_diagnostics.tools_list.tools.find(t=>t.name==="upload_chatgpt_image");
+  assert.deepEqual(image._meta["openai/fileParams"],["file"]);
+  const denied=await (await mcp(request("tools/call",{name:"list_entries",arguments:{limit:1}}))).json();
+  assert.equal(denied.result.isError,true);
+  assert.ok(!JSON.stringify(denied).includes("mcp_diagnostics"));
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM mutation_requests").get().n,0);
+ }finally{sqlite.close();}
+});
+
 
 test("owner/public matrix blocks drafts, unreleased revisions, legacy member scopes and immediate restrictions",async()=>{
  const {db,sqlite}=fixture();
@@ -312,3 +333,4 @@ test("ChatGPT-generated fileParams image uploads via signed URL and remains unpu
   globalThis.__diaryTestEnv.MEDIA=previousMedia;
  }
 });
+
