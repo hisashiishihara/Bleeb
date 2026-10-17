@@ -97,10 +97,10 @@ test("membership endpoints are inert, even for authenticated owner; owner APIs r
  }finally{sqlite.close();}
 });
 
-test("eleven MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
+test("twelve MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
  const {sqlite}=fixture();
  try {
-  assert.equal(tools.length,11);
+  assert.equal(tools.length,12);
   assert.deepEqual(tools.find(t=>t.name==="publish_entry").inputSchema.properties.visibility.enum,["owner","public"]);
   const call=async(name,args,headers=ownerHeaders)=>{
    const response=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers,body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:args}})}));
@@ -205,6 +205,48 @@ test("trusted HTTPS image import saves R2 and hero revision, never auto-publishe
   sqlite.close();
   globalThis.fetch=oldFetch;
   globalThis.__diaryTestEnv.AI_DIARY_IMAGE_SOURCE_HOSTS=previousHosts;
+  globalThis.__diaryTestEnv.MEDIA=previousMedia;
+ }
+});
+
+test("MCP Base64 uploads create private R2 images and unpublished hero revisions",async()=>{
+ const {db,sqlite}=fixture();
+ const previousMedia=globalThis.__diaryTestEnv.MEDIA;
+ const stored=new Map();
+ try{
+  globalThis.__diaryTestEnv.MEDIA={
+   async put(key,value){stored.set(key,await value.arrayBuffer());},
+   async delete(key){stored.delete(key);},
+   async head(key){return stored.has(key)?{key}:null;}
+  };
+  const entry=await store.saveDraft(db,{title:"Base64 fixture",body_md:"Published without image",request_id:req()});
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"public",request_id:req()});
+  const image=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0]).toString("base64");
+  const call=async args=>{
+   const response=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers:ownerHeaders,
+    body:JSON.stringify({jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"upload_media",arguments:args}})}));
+   const result=(await response.json()).result;
+   assert.equal(result.isError,undefined,JSON.stringify(result));
+   return JSON.parse(result.content[0].text);
+  };
+  const inline=await call({entry_id:entry.entry_id,expected_revision:1,image_base64:image,content_type:"image/png",
+   file_name:"test.png",usage:"inline",alt_text:"Fixture",request_id:req()});
+  assert.match(inline.markdown,/^!\[Fixture\]\(\/media\//);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).entry.latest_revision,1);
+  const args={entry_id:entry.entry_id,expected_revision:1,image_base64:image,content_type:"image/png",
+   file_name:"test.png",usage:"hero",alt_text:"Fixture cover",request_id:req()};
+  const hero=await call(args);
+  assert.equal(hero.revision,2);
+  assert.equal(hero.published_revision,1);
+  assert.equal((await call(args)).media_id,hero.media_id);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id,revision:2})).revision.hero_media_id,hero.media_id);
+  assert.equal((await readableEntry(db,entry.slug)).hero_media_id,null);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM media_assets").first()).n,2);
+  assert.equal(stored.size,2);
+  await assert.rejects(store.uploadMedia(db,{...args,request_id:req(),expected_revision:1}),e=>e.status===409);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM media_assets").first()).n,2);
+ }finally{
+  sqlite.close();
   globalThis.__diaryTestEnv.MEDIA=previousMedia;
  }
 });
