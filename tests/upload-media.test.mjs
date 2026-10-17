@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { decodeBase64Image, MAX_IMAGE_BASE64_CHARS, MAX_MCP_UPLOAD_BODY_CHARS } from "../lib/base64-image.ts";
 import { IMAGE_MAX_BYTES, matchesSignature } from "../lib/media-rules.ts";
+import { tools } from "../plugin/tool-definitions.ts";
 
 const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
 test("MCP Base64 image transport decodes byte-exact PNG", async () => {
@@ -26,4 +27,16 @@ test("enforce the 10 MiB decoded image limit before decode", () => {
   assert.throws(() => decodeBase64Image("A".repeat(MAX_IMAGE_BASE64_CHARS + 4), "image/png", "x.png"), { code: "media_too_large" });
   const encoded = Buffer.alloc(IMAGE_MAX_BYTES).toString("base64");
   assert.equal(decodeBase64Image(encoded, "image/png", "x.png").size, IMAGE_MAX_BYTES);
+});
+
+test("register owner-only upload_media with exact format, size and revision arguments", () => {
+  const entry = tools.find(tool => tool.name === "upload_media");
+  assert.ok(entry);
+  assert.deepEqual(entry.inputSchema.required, [
+    "entry_id", "expected_revision", "image_base64", "content_type", "file_name", "usage", "request_id"
+  ]);
+  assert.deepEqual(entry.inputSchema.properties.usage.enum, ["hero", "inline"]);
+  assert.deepEqual(entry.inputSchema.properties.content_type.enum, ["image/jpeg", "image/png", "image/gif", "image/webp"]);
+  assert.equal(entry.inputSchema.properties.image_base64.maxLength, MAX_IMAGE_BASE64_CHARS);
+  assert.equal(entry.inputSchema.additionalProperties, false);
 });
