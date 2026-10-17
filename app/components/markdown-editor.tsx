@@ -43,6 +43,21 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   return ()=>window.removeEventListener("beforeunload",warn);
  },[dirty]);
  const tags=()=>tagsText.split(",").map(s=>s.trim()).filter(Boolean);
+ async function importMarkdown(file:File|undefined){
+  if(!file)return;
+  if(file.size>300000){setError("Markdown ファイルが大きすぎます。");return;}
+  if(dirty&&!window.confirm("未保存の本文を読み込んだ Markdown で置き換えますか？"))return;
+  const text=await file.text();
+  if(text.length>150000){setError("本文は15万文字以内にしてください。");return;}
+  setBody(text);setDirty(true);setPreview(false);setMessage("Markdown を読み込みました。保存してリビジョンに反映してください。");setError("");
+ }
+ function downloadMarkdown(){
+  const blob=new Blob([body],{type:"text/markdown;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=(title.replace(/[^a-zA-Z0-9\u3040-\u30ff\u3400-\u9fff_-]+/g,"_").slice(0,70)||"aiDiary")+".md";
+  a.click();URL.revokeObjectURL(url);
+ }
  const update=(setter:(v:string)=>void)=>(value:string)=>{setter(value);setDirty(true);setMessage("");};
  async function save(){
   if(busy)return;
@@ -121,7 +136,14 @@ export function MarkdownEditor({initial}:{initial:Initial}){
      <label>タグ（カンマ区切り・最大20件）<input value={tagsText} onChange={e=>update(setTagsText)(e.target.value)} placeholder="ChatGPT, 技術, 日記"/></label>
      <div className="editor-toolbar">
        <strong>本文（Markdown）</strong>
-       <button type="button" className="ghost" onClick={()=>setPreview(v=>!v)}>{preview?"編集に戻る":"プレビュー"}</button>
+       <div className="editor-toolbar">
+         <label className="file-upload">.md を読み込む
+           <input type="file" accept=".md,text/markdown,text/plain"
+             onChange={e=>{void importMarkdown(e.target.files?.[0]);e.target.value="";}}/>
+         </label>
+         <button type="button" className="ghost" onClick={downloadMarkdown}>.md を保存</button>
+         <button type="button" className="ghost" onClick={()=>setPreview(v=>!v)}>{preview?"編集に戻る":"プレビュー"}</button>
+       </div>
      </div>
      {preview?<div className="prose editor-preview"><MediaMarkdown body={body}/></div>:
        <textarea className="editor-textarea" spellCheck={false} value={body} onChange={e=>update(setBody)(e.target.value)}

@@ -46,7 +46,7 @@ authentication. Media is returned with `no-store`, `nosniff` and
 
 ## Markdown
 
-Write standard Markdown with headings, links, code blocks, and images.
+Write standard Markdown with headings, links, code blocks, and images. The browser editor can import the body from a local `.md` file and download the current body as a `.md` file (these actions do not by themselves mutate published content).
 Images are inserted with:
 
 `![説明](/media/<uuid>)`
