@@ -39,7 +39,8 @@ export async function downloadChatGPTImage(
   const {image} = await downloadImage(file.download_url, chatGPTFileHosts(configured), fetcher, {
     maxUrlLength: 8192,
     expectedType: file.mime_type === "application/octet-stream" ? undefined : file.mime_type,
-    allowUnknownMIME: true
+    allowUnknownMIME: true,
+    diagnosticHost: true
   });
   const name = (file.file_name ?? image.name).replace(/[\\/\u0000-\u001f\u007f]/g, "_");
   return new File([image], name, { type: image.type });
