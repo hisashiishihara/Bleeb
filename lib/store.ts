@@ -152,6 +152,9 @@ export async function publishEntry(db: DB, args: unknown) {
     return JSON.parse(previous.response_json);
   }
   const entry = await requireEntry(db, id);
+  // The reader view always resolves the newest revision. A publish operation
+  // that selects an old revision would appear to succeed but display another.
+  if (rev !== entry.latest_revision) throw new DiaryError("stale_revision", "Only the latest revision can be displayed; restore an older one as a new revision", 409);
   const candidate = await db.prepare("SELECT revision FROM entry_revisions WHERE entry_id=? AND revision=?").bind(id,rev).first<{revision:number}>();
   if (!candidate) throw new DiaryError("not_found", "Saved revision not found", 404);
   const now = NOW();
@@ -188,7 +191,10 @@ export async function exportEntries(db: DB, args: unknown) {
   }
   const includeDrafts = a.include_drafts === true;
   const all = await db.prepare("SELECT * FROM entries ORDER BY created_at,id").all<Entry>();
-  const entries = all.results.filter(x => (includeDrafts || x.status === "published") && (ids === undefined || (ids as string[]).includes(x.id)));
+  const entries = all.results.filter(x => (includeDrafts || x.status === "published") && (ids === undefined || (ids as string[]).includes(x.id)))
+    // Public-only export must describe exactly what readers see. Full owner backup
+    // preserves original publication pointers and every historical revision.
+    .map(x => includeDrafts || x.status !== "published" ? x : {...x, published_revision:x.latest_revision});
   if (entries.length > 100) throw new DiaryError("export_too_large", "Export in smaller batches", 413);
   const revisions: Revision[] = [];
   for (const entry of entries) {
