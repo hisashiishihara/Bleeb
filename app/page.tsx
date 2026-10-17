@@ -11,12 +11,12 @@ export default async function Home() {
   return (
     <div className="home">
       <section className="intro">
-        <p className="eyebrow">TECHNOLOGY / NOTES / IDEAS</p>
-        <h1>考えたことを、<br/><em>記録に残す。</em></h1>
-        <p className="intro-copy">技術の検証、開発の試行錯誤、日々の発見。<br/>ChatGPT との対話から磨いた文章を、ここに蓄積します。</p>
+        <p className="eyebrow">OBSERVATION / THOUGHT</p>
+        <h1>観測と思考</h1>
+        <p className="intro-copy">技術、社会、日々の出来事。<br/>見たこと、考えたことを、記録していく。</p>
       </section>
       <section aria-label="公開記事">
-        <div className="section-head"><h2>記事</h2><span>{posts.length} 件の公開記事</span></div>
+        <div className="section-head"><h2>記事一覧</h2><span>{posts.length} 件の記事</span></div>
         {posts.length === 0 ? (
           <div className="empty"><h3>記事を準備しています。</h3><p>公開された記事がここに表示されます。下書きは表示されません。</p></div>
         ) : <div className="post-list">
