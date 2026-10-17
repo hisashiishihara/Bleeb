@@ -5,7 +5,7 @@
 export type NoteMode = "excerpt" | "full";
 export type NoteExportEntry = {
   id: string; slug: string; status: string; visibility: string;
-  published_revision: number | null;
+  published_revision: number | null; latest_revision: number;
 };
 export type NoteExportRevision = {
   revision: number; title: string; summary: string | null;
@@ -101,7 +101,7 @@ export function noteExport(
 ): {filename:string;content:string;sourceUrl:string|null} {
   if(mode!=="excerpt"&&mode!=="full")throw new Error("Invalid note export mode");
   const visible=entry.status==="published" && entry.visibility==="public" &&
-    entry.published_revision===revision.revision;
+    entry.latest_revision===revision.revision;
   // Do not construct a link to inaccessible or out-of-date articles.
   const sourceUrl=visible ? new URL("/posts/"+encodeURIComponent(entry.slug),origin).toString() : null;
   const body=mode==="full" ? revision.body_md : excerpt(revision);
