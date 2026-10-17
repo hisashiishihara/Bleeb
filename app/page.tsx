@@ -22,7 +22,7 @@ export default async function Home() {
         ) : <div className="post-list">
           {posts.map(post => <article className="post-summary" key={post.slug}>
             <div className="post-date">{jpDate(post.published_at)}</div>
-            <div><h3><a href={"/posts/" + encodeURIComponent(post.slug)}>{post.title}</a></h3>
+            <div>{post.hero_media_id&&<a href={"/posts/" + encodeURIComponent(post.slug)}><img className="home-hero" src={"/media/"+post.hero_media_id} alt={post.hero_alt_text||post.title} loading="lazy"/></a>}<h3><a href={"/posts/" + encodeURIComponent(post.slug)}>{post.title}</a></h3>
             {post.summary && <p>{post.summary}</p>}</div>
             <span className="arrow" aria-hidden="true">↗</span>
           </article>)}

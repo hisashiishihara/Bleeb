@@ -7,6 +7,7 @@ type Initial={
  id?:string;
  title:string;summary:string;body_md:string;tags:string[];
  revision?:number;published_revision?:number|null;
+ hero_media_id?:string|null;hero_alt_text?:string|null;
  visibility?:"owner"|"public";status?:"draft"|"published";
 };
 type JsonResponse=Record<string,unknown>;
@@ -27,6 +28,10 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [tagsText,setTagsText]=useState(initial.tags.join(", "));
  const [revision,setRevision]=useState<number|null>(initial.revision??null);
  const [publishedRev,setPublishedRev]=useState<number|null>(initial.published_revision??null);
+ const [heroId,setHeroId]=useState(initial.hero_media_id??null);
+ const [heroAlt,setHeroAlt]=useState(initial.hero_alt_text??"");
+ const [imageUrl,setImageUrl]=useState("");
+ const [manualMediaId,setManualMediaId]=useState("");
  const [status,setStatus]=useState(initial.status??"draft");
  const [visibility,setVisibility]=useState<"owner"|"public">(initial.visibility??"owner");
  const [dirty,setDirty]=useState(false);
@@ -104,6 +109,36 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   }catch(e){setError(e instanceof Error?e.message:"非公開化に失敗しました。");}
   finally{setBusy(false);}
  }
+ async function changeHero(nextId:string|null){
+  if(!initial.id||!revision||busy||uploading||dirty)return;
+  setBusy(true);setError("");setMessage("");
+  try{
+   const result=await postJson(nextId?"set_entry_hero_media":"clear_entry_hero_media",{
+    entry_id:initial.id,expected_revision:revision,request_id:crypto.randomUUID(),
+    ...(nextId?{hero_media_id:nextId,alt_text:heroAlt}:{})
+   });
+   setRevision(Number(result.revision));
+   setHeroId(nextId);setManualMediaId("");
+   if(!nextId)setHeroAlt("");
+   setMessage("アイキャッチをリビジョン "+result.revision+" に保存しました。公開版はそのままです。");
+  }catch(e){setError(e instanceof Error?e.message:"アイキャッチの変更に失敗しました。");}
+  finally{setBusy(false);}
+ }
+ async function importUrl(){
+  if(!initial.id||!revision||busy||uploading||dirty||!imageUrl.trim())return;
+  setBusy(true);setError("");setMessage("");
+  try{
+   const result=await postJson("import_media_from_url",{
+    entry_id:initial.id,expected_revision:revision,usage:"hero",source_url:imageUrl.trim(),
+    alt_text:heroAlt,request_id:crypto.randomUUID()
+   });
+   setRevision(Number(result.revision));
+   setHeroId(String(result.media_id));
+   setImageUrl("");
+   setMessage("画像をR2に取り込み、アイキャッチをリビジョン "+result.revision+" に保存しました。公開版は変更されていません。");
+  }catch(e){setError(e instanceof Error?e.message:"URLから画像を取り込めませんでした。");}
+  finally{setBusy(false);}
+ }
  async function upload(file:File|undefined){
   if(!file||!initial.id||uploading)return;
   setError("");setMessage("");
@@ -175,6 +210,31 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    </form>
    {error&&<p className="editor-error" role="alert">{error}{error.includes("Expected")&&<button className="ghost" onClick={()=>location.reload()}>最新版を読み込み直す</button>}</p>}
    {message&&<p className="editor-notice" role="status">{message}</p>}
+   {initial.id&&<section className="editor-hero">
+      <h2>アイキャッチ画像</h2>
+      <p className="owner-lead">記事本文とは別に保存します。変更は新しい非公開リビジョンとなり、公開版を自動更新しません。</p>
+      {heroId?<img src={"/media/"+heroId} alt={heroAlt||"アイキャッチ"} className="hero-image" loading="lazy"/>:
+       <p className="editor-hint">現在のリビジョンにアイキャッチはありません。</p>}
+      <label>代替テキスト<input maxLength={200} value={heroAlt} onChange={e=>setHeroAlt(e.target.value)} placeholder="画像の説明"/></label>
+      <label>画像URL（許可済みホストからHTTPSで取得）
+       <input type="url" value={imageUrl} onChange={e=>setImageUrl(e.target.value)}
+        placeholder="https://example.com/generated-image.png"/>
+      </label>
+      <div className="editor-actions">
+       <button type="button" className="ghost" disabled={!imageUrl.trim()||busy||uploading||dirty}
+        onClick={()=>void importUrl()}>URLから取り込んでアイキャッチに設定</button>
+      </div>
+      <label>アップロード済み画像のID
+       <input value={manualMediaId} onChange={e=>setManualMediaId(e.target.value)} placeholder="画像のメディア UUID"/>
+      </label>
+      <div className="editor-actions">
+       <button type="button" className="ghost" disabled={!manualMediaId.trim()||busy||uploading||dirty}
+        onClick={()=>void changeHero(manualMediaId.trim())}>既存画像をアイキャッチに設定</button>
+       <button type="button" className="ghost" disabled={!heroId||busy||uploading||dirty}
+        onClick={()=>void changeHero(null)}>アイキャッチを解除</button>
+      </div>
+      {dirty&&<p className="editor-hint">先に本文の変更を保存してください。</p>}
+   </section>}
    {initial.id&&<section className="editor-publication">
       <h2>公開する</h2>
       <p>保存したリビジョンだけを、明示的な操作で公開します。未保存の編集は先に保存してください。</p>

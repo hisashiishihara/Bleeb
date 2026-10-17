@@ -46,6 +46,7 @@ export async function searchOwnerArchive(db:DB, input:{q?:string;status?:string;
 export type ArchiveRevision = {
   entry_id:string;revision:number;title:string;summary:string|null;
   body_md:string;tags_json:string;saved_at:string;
+  hero_media_id:string|null;hero_alt_text:string|null;
 };
 export async function getOwnerArchiveEntry(db:DB,id:string,revision?:number) {
   entryId(id);

@@ -24,7 +24,7 @@ const {tools}=await import("../plugin/tool-definitions.ts");
 const {POST:ownerApi}=await import("../app/api/owner/[action]/route.ts");
 function fixture(){
   const sqlite=new DatabaseSync(":memory:");
-  for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
+  for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql","0003_media.sql","0004_hero_media.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
   const db={prepare(sql){
     const bind=values=>({bind(...v){return bind(v);},async first(){return sqlite.prepare(sql).get(...values)??null;},async all(){return {results:sqlite.prepare(sql).all(...values)};},async run(){return sqlite.prepare(sql).run(...values);}});
     return bind([]);
@@ -97,10 +97,10 @@ test("membership endpoints are inert, even for authenticated owner; owner APIs r
  }finally{sqlite.close();}
 });
 
-test("eight MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
+test("eleven MCP tools remain owner-only and publish schema permits only owner/public",async()=>{
  const {sqlite}=fixture();
  try {
-  assert.equal(tools.length,8);
+  assert.equal(tools.length,11);
   assert.deepEqual(tools.find(t=>t.name==="publish_entry").inputSchema.properties.visibility.enum,["owner","public"]);
   const call=async(name,args,headers=ownerHeaders)=>{
    const response=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers,body:JSON.stringify({jsonrpc:"2.0",id:1,method:"tools/call",params:{name,arguments:args}})}));
@@ -125,9 +125,45 @@ test("migration preserves old published content but defaults its audience to own
  const sqlite=new DatabaseSync(":memory:");
  try {
   sqlite.exec(readFileSync(new URL("../drizzle/0000_initial.sql",import.meta.url),"utf8"));
-  sqlite.exec("INSERT INTO entries VALUES('legacy01','legacy','published',1,1,'t','t','t'); INSERT INTO entry_revisions VALUES('legacy01',1,'old','unchanged',NULL,'[]','t');");
+  sqlite.exec("INSERT INTO entries VALUES('legacy01','legacy','published',1,1,'t','t','t'); INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES('legacy01',1,'old','unchanged',NULL,'[]','t');");
   sqlite.exec(readFileSync(new URL("../drizzle/0002_article_access.sql",import.meta.url),"utf8"));
   assert.equal(sqlite.prepare("SELECT visibility FROM entries").get().visibility,"owner");
   assert.equal(sqlite.prepare("SELECT body_md FROM entry_revisions").get().body_md,"unchanged");
+ }finally{sqlite.close();}
+});
+
+test("hero changes append revisions without leaking unpublished images",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const mediaId="550e8400-e29b-41d4-a716-446655440000";
+  const entry=await store.saveDraft(db,{title:"Test hero",body_md:"Original",request_id:req()});
+  await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,?,?,?,?)")
+   .bind(mediaId,entry.entry_id,"entries/"+entry.entry_id+"/"+mediaId,"image/png",100,"fixture.png","now").run();
+  const anon={owner:false,registered:false,paid:false};
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"public",request_id:req()});
+  const first=await store.setHeroMedia(db,{entry_id:entry.entry_id,expected_revision:1,hero_media_id:mediaId,alt_text:"illustration",request_id:req()});
+  assert.equal(first.revision,2);
+  assert.equal(first.published_revision,1);
+  assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,null);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).revision.hero_media_id,mediaId);
+  const {readableMedia}=await import("../lib/media-store.ts");
+  assert.equal(await readableMedia(db,mediaId,false),null);
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:2,visibility:"public",request_id:req()});
+  assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,mediaId);
+  assert.equal((await readableEntries(db,anon))[0].hero_media_id,mediaId);
+  assert.equal((await readableMedia(db,mediaId,false)).id,mediaId);
+  const next=await store.updateEntry(db,{entry_id:entry.entry_id,expected_revision:2,title:"Test hero",body_md:"Body changed",request_id:req()});
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).revision.hero_media_id,mediaId);
+  assert.equal(next.published_revision,2);
+  const cleared=await store.clearHeroMedia(db,{entry_id:entry.entry_id,expected_revision:3,request_id:req()});
+  assert.equal(cleared.revision,4);
+  assert.equal((await readableMedia(db,mediaId,false)).id,mediaId);
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:4,visibility:"public",request_id:req()});
+  assert.equal((await readableEntry(db,entry.slug,anon)).hero_media_id,null);
+  assert.equal(await readableMedia(db,mediaId,false),null);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id,revision:2})).revision.hero_media_id,mediaId);
+  await assert.rejects(store.setHeroMedia(db,{entry_id:entry.entry_id,expected_revision:2,hero_media_id:mediaId,request_id:req()}),e=>e.status===409);
+  const e2=await store.saveDraft(db,{title:"Other",body_md:"x",request_id:req()});
+  await assert.rejects(store.setHeroMedia(db,{entry_id:e2.entry_id,expected_revision:1,hero_media_id:mediaId,request_id:req()}),e=>e.status===404);
  }finally{sqlite.close();}
 });

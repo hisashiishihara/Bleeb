@@ -5,7 +5,9 @@ import { makeExport, type ExportEntry, type ExportRevision } from "./export";
 type Entry = ExportEntry;
 import { visibility } from "./access";
 import { deleteMedia } from "./media-deletion";
-import { bucket } from "./media-store";
+import { bucket, createMedia } from "./media-store";
+import { downloadImage, configuredImageHosts } from "./remote-image";
+import { MEDIA_ID_RE } from "./media-rules";
 export { readableEntries as publicEntries, readableEntry as publicEntry } from "./reader-store";
 type Revision = ExportRevision;
 type MutationRow = { operation: string; response_json: string };
@@ -131,7 +133,9 @@ export async function updateEntry(db: DB, args: unknown) {
   const response = { entry_id: id, status: entry.status, revision: next, published_revision: entry.published_revision };
   return mutate(db, req, "update_entry", response, [
     db.prepare("UPDATE entries SET latest_revision=?,updated_at=? WHERE id=? AND latest_revision=?").bind(next, now, id, expected),
-    db.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES(?,?,?,?,?,?,?)").bind(id, next, draft.title, draft.body_md, draft.summary ?? null, JSON.stringify(draft.tags), now)
+    db.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at,hero_media_id,hero_alt_text) "+
+      "SELECT ?,?,?,?,?,?,?,hero_media_id,hero_alt_text FROM entry_revisions WHERE entry_id=? AND revision=?")
+      .bind(id,next,draft.title,draft.body_md,draft.summary ?? null,JSON.stringify(draft.tags),now,id,expected)
   ]);
 }
 
@@ -192,6 +196,84 @@ export async function exportEntries(db: DB, args: unknown) {
   return makeExport(entries, revisions, NOW());
 }
 
+
+type HeroArgs=Record<string,unknown>;
+async function newHeroRevision(db:DB,input:HeroArgs,action:string,mediaResult?:Record<string,unknown>){
+ const id=entryId(input.entry_id),req=requestId(input.request_id);
+ const existing=await prior(db,req);
+ if(existing){
+  if(existing.operation!==action)throw new DiaryError("request_conflict","Request ID used for another operation",409);
+  return JSON.parse(existing.response_json);
+ }
+ const expected=revisionNumber(input.expected_revision);
+ const article=await requireEntry(db,id);
+ if(article.latest_revision!==expected)throw new DiaryError("stale_revision","Expected "+expected+", current "+article.latest_revision,409);
+ const heroId=input.hero_media_id;
+ if(heroId!==null){
+  if(typeof heroId!=="string"||!MEDIA_ID_RE.test(heroId))throw new DiaryError("invalid_media_id","Invalid hero image ID");
+  const asset=await db.prepare("SELECT id FROM media_assets WHERE id=? AND entry_id=? AND content_type LIKE 'image/%'")
+   .bind(heroId,id).first<{id:string}>();
+  if(!asset)throw new DiaryError("not_found","Hero image must belong to the selected article",404);
+ }
+ if(input.alt_text!==undefined && (typeof input.alt_text!=="string"||input.alt_text.length>200))
+  throw new DiaryError("invalid_input","Image alt text must be at most 200 characters",400);
+ const alt=heroId===null?null:(typeof input.alt_text==="string"?input.alt_text:null);
+ const next=expected+1,now=NOW();
+ const response={entry_id:id,status:article.status,revision:next,published_revision:article.published_revision,
+  hero_media_id:heroId,hero_alt_text:alt,...mediaResult};
+ return mutate(db,req,action,response,[
+  db.prepare("UPDATE entries SET latest_revision=?,updated_at=? WHERE id=? AND latest_revision=?").bind(next,now,id,expected),
+  db.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at,hero_media_id,hero_alt_text) "+
+   "SELECT entry_id,?,title,body_md,summary,tags_json,?,?,? FROM entry_revisions WHERE entry_id=? AND revision=?")
+   .bind(next,now,heroId,alt,id,expected)
+ ]);
+}
+
+export async function setHeroMedia(db:DB,args:unknown){
+ const input=args as HeroArgs;
+ return newHeroRevision(db,input,"set_entry_hero_media");
+}
+export async function clearHeroMedia(db:DB,args:unknown){
+ const input={...(args as HeroArgs),hero_media_id:null};
+ return newHeroRevision(db,input,"clear_entry_hero_media");
+}
+
+/** Download only from an explicit trusted HTTPS-host allowlist. Never expose
+ * source URLs, signed query strings, or redirects in persisted records. */
+export async function importMediaFromUrl(db:DB,args:unknown){
+ const input=args as HeroArgs;
+ const id=entryId(input.entry_id),req=requestId(input.request_id);
+ const existing=await prior(db,req);
+ if(existing){
+  if(existing.operation!=="import_media_from_url")throw new DiaryError("request_conflict","Request ID used for another operation",409);
+  return JSON.parse(existing.response_json);
+ }
+ const expected=revisionNumber(input.expected_revision);
+ const entry=await requireEntry(db,id);
+ if(entry.latest_revision!==expected)throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+ if(input.usage!=="hero"&&input.usage!=="inline")
+  throw new DiaryError("invalid_input","Usage must be hero or inline");
+ if(typeof input.source_url!=="string")throw new DiaryError("invalid_image_url","Source URL required");
+ const configured=(env as unknown as {AI_DIARY_IMAGE_SOURCE_HOSTS?:string}).AI_DIARY_IMAGE_SOURCE_HOSTS;
+ const {image}=await downloadImage(input.source_url,configuredImageHosts(configured));
+ const asset=await createMedia(db,bucket(),id,image);
+ try{
+  if(input.usage==="hero"){
+   return await newHeroRevision(db,{...input,hero_media_id:asset.id},"import_media_from_url",
+    {media_id:asset.id,media_url:asset.url});
+  }
+  // Inline uploads do not modify the article. The owner must explicitly add
+  // returned Markdown to a saved revision before it becomes publicly readable.
+  const response={entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:asset.markdown};
+  return await mutate(db,req,"import_media_from_url",response,[]);
+ }catch(e){
+  // If a concurrent revision update wins, cleanup the unused object. Historic
+  // content stays unchanged. A failed cleanup leaves a manageable orphan.
+  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  throw e;
+ }
+}
+
 export async function dispatch(db: DB, action: string, args: unknown) {
   if (!args || typeof args !== "object" || Array.isArray(args)) throw new DiaryError("invalid_input", "JSON object required");
   switch(action) {
@@ -202,6 +284,9 @@ export async function dispatch(db: DB, action: string, args: unknown) {
     case "publish_entry": return publishEntry(db,args);
     case "unpublish_entry": return unpublishEntry(db,args);
     case "export_entries": return exportEntries(db,args);
+    case "set_entry_hero_media": return setHeroMedia(db,args);
+    case "clear_entry_hero_media": return clearHeroMedia(db,args);
+    case "import_media_from_url": return importMediaFromUrl(db,args);
     case "delete_media": {
       const input=args as Record<string,unknown>;
       return deleteMedia(db,bucket(),typeof input.media_id==="string"?input.media_id:"",

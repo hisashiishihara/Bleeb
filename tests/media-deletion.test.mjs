@@ -11,7 +11,7 @@ const key="entries/"+entryId+"/"+mediaId;
 function fixture(){
  const sqlite=new DatabaseSync(":memory:");
  sqlite.exec("PRAGMA foreign_keys=ON");
- for(const n of ["0000_initial","0002_article_access","0003_media"])
+ for(const n of ["0000_initial","0002_article_access","0003_media","0004_hero_media"])
    sqlite.exec(readFileSync(new URL("../drizzle/"+n+".sql",import.meta.url),"utf8"));
  sqlite.prepare("INSERT INTO entries(id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at) VALUES(?,?,'published','owner',2,1,'now','now')")
   .run(entryId,"fixture");

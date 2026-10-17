@@ -29,6 +29,7 @@ export default async function PrivateEntry({params,searchParams}:Props){
     <div className="revision-links"><strong>履歴を読む</strong>
       {history.map(item=><a key={item.revision} aria-current={content.revision===item.revision?"page":undefined} href={"/owner/archive/"+encodeURIComponent(id)+"?revision="+item.revision}>r{item.revision}</a>)}
     </div>
+    {content.hero_media_id&&<img className="hero-image" src={"/media/"+content.hero_media_id} alt={content.hero_alt_text||content.title} loading="lazy"/>}
     <div className="prose"><MediaMarkdown body={content.body_md}/></div>
   </article>;
 }

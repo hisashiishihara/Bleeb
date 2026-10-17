@@ -2,6 +2,7 @@ import { DiaryError } from "./input.ts";
 export type ExportRevision = {
   entry_id: string; revision: number; title: string; body_md: string;
   summary: string | null; tags_json: string; saved_at: string;
+  hero_media_id?:string|null; hero_alt_text?:string|null;
 };
 export type ExportEntry = {
   id: string; slug: string; status: string; latest_revision: number;

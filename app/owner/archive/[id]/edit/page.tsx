@@ -18,6 +18,7 @@ export default async function EditPost({params}:{params:Promise<{id:string}>}){
  return <MarkdownEditor initial={{
    id:entry.id,title:content.title,summary:content.summary??"",
    body_md:content.body_md,tags,revision:entry.latest_revision,
+   hero_media_id:content.hero_media_id,hero_alt_text:content.hero_alt_text,
    published_revision:entry.published_revision,visibility:entry.visibility==="public"?"public":"owner",
    status:entry.status
  }}/>;
