@@ -17,9 +17,9 @@ export function configuredImageHosts(raw:string|undefined):ImageHostPolicy {
  }
  return hosts;
 }
-export function validateImageSource(value:string,allowed:ImageHostPolicy):URL {
+export function validateImageSource(value:string,allowed:ImageHostPolicy,maxUrlLength=2048):URL {
  if(allowed.length===0)throw new DiaryError("image_source_unconfigured","Allowed image source hosts are not configured",503);
- if(typeof value!=="string"||value.length>2048)throw new DiaryError("invalid_image_url","Invalid image URL");
+ if(typeof value!=="string"||value.length>maxUrlLength)throw new DiaryError("invalid_image_url","Invalid image URL");
  let url:URL;
  try{url=new URL(value);}catch{throw new DiaryError("invalid_image_url","Invalid image URL");}
  const h=url.hostname.toLowerCase();
@@ -38,9 +38,10 @@ export function validateImageSource(value:string,allowed:ImageHostPolicy):URL {
  return url;
 }
 export async function downloadImage(
- sourceUrl:string,allowlist:ImageHostPolicy,fetcher:typeof fetch=fetch
+ sourceUrl:string,allowlist:ImageHostPolicy,fetcher:typeof fetch=fetch,
+ options:{maxUrlLength?:number;expectedType?:string}={}
 ):Promise<{image:File;final_host:string}> {
- let url=validateImageSource(sourceUrl,allowlist);
+ let url=validateImageSource(sourceUrl,allowlist,options.maxUrlLength);
  for(let hop=0;hop<=MAX_HOPS;hop++){
   let response:Response;
   try {
@@ -55,15 +56,20 @@ export async function downloadImage(
    if(hop===MAX_HOPS)throw new DiaryError("too_many_redirects","Too many image redirects",422);
    const location=response.headers.get("location");
    if(!location)throw new DiaryError("invalid_redirect","Image redirect missing destination",422);
-   url=validateImageSource(new URL(location,url).toString(),allowlist);
+   url=validateImageSource(new URL(location,url).toString(),allowlist,options.maxUrlLength);
    continue;
   }
   if(!response.ok||!response.body){
    await response.body?.cancel();
    throw new DiaryError("image_fetch_failed","Image URL is not anonymously downloadable (HTTP "+response.status+")",422);
   }
-  const mime=response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
-  if(!validMediaType(mime)||!IMAGE_TYPES.some(type=>type===mime)){
+  const declared=response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+  const expected=options.expectedType;
+  // Host-resolved ChatGPT files may be delivered as octet-stream, so use a
+  // valid declared image MIME only in that case and still verify file bytes.
+  const mime=(!declared||declared==="application/octet-stream") && expected ? expected : declared;
+  if(!validMediaType(mime)||!IMAGE_TYPES.some(type=>type===mime)||
+    (expected!==undefined && mime!==expected)){
    await response.body.cancel();
    throw new DiaryError("invalid_media","URL must return an allowed image MIME type",415);
   }
