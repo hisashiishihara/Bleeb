@@ -71,7 +71,8 @@ export function markdownToNoteHtml(markdown: string): string {
   }
   flush();closeList();
   if(code!==null)out.push("<pre><code>"+html(code.join("\n"))+"</code></pre>");
-  return out.join("\n");
+  // Avoid extra empty blocks in note's HTML importer between adjacent tags.
+  return out.join("");
 }
 function excerpt(revision: NoteExportRevision): string {
   const paras=revision.body_md.replace(/\r\n?/g,"\n").split(/\n\s*\n/)
