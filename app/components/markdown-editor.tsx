@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {MediaMarkdown} from "./media-markdown";
 import {mediaMaxBytes,validMediaType} from "../../lib/media-rules";
 
@@ -35,10 +35,11 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [preview,setPreview]=useState(false);
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
+ const navigating=useRef(false);
 
  useEffect(()=>{
   if(!dirty)return;
-  const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue="";};
+  const warn=(event:BeforeUnloadEvent)=>{if(navigating.current)return;event.preventDefault();event.returnValue="";};
   window.addEventListener("beforeunload",warn);
   return ()=>window.removeEventListener("beforeunload",warn);
  },[dirty]);
@@ -70,6 +71,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
     const result=await postJson(action,data);
     setDirty(false);
     if(!initial.id){
+      navigating.current=true;
       window.location.assign("/owner/archive/"+encodeURIComponent(String(result.entry_id))+"/edit");
       return;
     }
@@ -173,8 +175,8 @@ export function MarkdownEditor({initial}:{initial:Initial}){
         </select>
       </label>
       <div className="editor-actions">
-        <button type="button" disabled={busy||dirty||!revision} onClick={()=>void publish()} className="editor-primary">保存済み r{revision??"-"} を公開</button>
-        {status==="published"&&<button type="button" disabled={busy} onClick={()=>void unpublish()} className="ghost">公開を取り消す</button>}
+        <button type="button" disabled={busy||uploading||dirty||!revision} onClick={()=>void publish()} className="editor-primary">保存済み r{revision??"-"} を公開</button>
+        {status==="published"&&<button type="button" disabled={busy||uploading} onClick={()=>void unpublish()} className="ghost">公開を取り消す</button>}
       </div>
    </section>}
  </section>;
