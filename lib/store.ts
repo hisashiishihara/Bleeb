@@ -303,7 +303,7 @@ export async function uploadMedia(db:DB,args:unknown){
     {media_id:asset.id,media_url:asset.url});
   }else{
    const alt=typeof input.alt_text==="string"?input.alt_text:asset.id;
-   const cleanAlt=alt.replace(/[\\[\\]\\\\\\n\\r]/g," ").slice(0,200);
+   const cleanAlt=alt.replace(/[\[\]\\\n\r]/g," ").slice(0,200);
    const markdown="!["+cleanAlt+"]("+asset.url+")";
    response=await mutate(db,req,"upload_media",
     {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown},[]);
