@@ -40,3 +40,34 @@ This likewise uses a reader-triggered embedded view with an ordinary link fallba
 - `app/styles/embeds.css`: fixed accessibility and layout for article extensions.
 
 `app/globals.css` imports these in order. A future theme mechanism can switch `theme.css` without touching database, publication, or MCP code. This change does not introduce a theme installer or public code execution.
+
+## Math (KaTeX)
+Inline math: `$E=mc^2$`. Display math uses double dollar delimiters on separate lines:
+
+```markdown
+$$
+E = mc^2
+$$
+```
+
+## Code syntax highlighting
+Use a regular fenced code block with a language name (for example `python`, `typescript`, `bash`, `sql`). Unsupported languages remain readable without code execution.
+
+## Footnotes
+Standard GFM notes:
+```markdown
+A claim with a source.[^source]
+[^source]: An external citation.
+```
+
+## Table of contents and heading links
+Articles with at least two level-2 or level-3 headings receive a collapsible, automatically generated table of contents. Headings have stable GitHub-style slug IDs. No handwritten HTML or script is needed.
+
+## YouTube
+Use the 11-character video ID, not a freeform iframe:
+
+```youtube
+dQw4w9WgXcQ
+```
+
+The visitor clicks to load from `youtube-nocookie.com`; a normal YouTube link is always available. Embedding can be disabled by third-party privacy or content restrictions.
