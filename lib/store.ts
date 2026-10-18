@@ -343,21 +343,8 @@ export async function importMediaFromUrl(db:DB,args:unknown){
  const configured=(env as unknown as {AI_DIARY_IMAGE_SOURCE_HOSTS?:string}).AI_DIARY_IMAGE_SOURCE_HOSTS;
  const {image}=await downloadImage(input.source_url,configuredImageHosts(configured));
  const asset=await createMedia(db,bucket(),id,image);
- try{
-  if(input.usage==="hero"){
-   return await newHeroRevision(db,{...input,hero_media_id:asset.id},"import_media_from_url",
-    {media_id:asset.id,media_url:asset.url});
-  }
-  // Inline uploads do not modify the article. The owner must explicitly add
-  // returned Markdown to a saved revision before it becomes publicly readable.
-  const response={entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:asset.markdown};
-  return await mutate(db,req,"import_media_from_url",response,[]);
- }catch(e){
-  // If a concurrent revision update wins, cleanup the unused object. Historic
-  // content stays unchanged. A failed cleanup leaves a manageable orphan.
-  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
-  throw e;
- }
+ // Inline imports only return Markdown; the caller saves a new revision explicitly.
+ return commitUploadedMedia(db,input,id,req,asset,"import_media_from_url",asset.markdown);
 }
 
 
@@ -365,7 +352,7 @@ export async function importMediaFromUrl(db:DB,args:unknown){
  * when another request with the same idempotency key already won.
  */
 async function commitUploadedMedia(db:DB,input:HeroArgs,id:string,req:string,
- asset:Awaited<ReturnType<typeof createMedia>>,operation:"upload_media"|"upload_chatgpt_image",inlineMarkdown:string){
+ asset:Awaited<ReturnType<typeof createMedia>>,operation:"upload_media"|"upload_chatgpt_image"|"import_media_from_url",inlineMarkdown:string){
  try{
   let result:Record<string,unknown>;
   if(input.usage==="hero"){
