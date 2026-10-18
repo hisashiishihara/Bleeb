@@ -1,0 +1,11 @@
+/* Engine-owned rich content blocks, independent of the reader theme. */
+.article-chart{margin:2rem 0;max-width:100%;overflow-x:auto}
+.article-chart-canvas{position:relative;width:100%;height:clamp(230px,50vw,420px)}
+.article-chart details{font-size:.82em;margin-top:10px}
+.article-chart table{border-collapse:collapse;width:100%;line-height:1.5}
+.article-chart th,.article-chart td{border-bottom:1px solid #dce3e2;padding:7px 10px;text-align:left}
+.article-external-embed{margin:2rem 0;padding:16px;border:1px solid #dce3e2;border-radius:6px}
+.article-external-embed iframe{width:100%;min-height:380px;border:0;background:#fff}
+.article-external-embed button{cursor:pointer;border:1px solid #a7b9b9;background:transparent;border-radius:4px;padding:12px 16px;font:inherit}
+.article-external-embed figcaption{font-weight:600;margin-bottom:12px}
+.article-external-embed p{margin-bottom:0;font-size:.85em}
