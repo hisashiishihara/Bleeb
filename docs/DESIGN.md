@@ -4,6 +4,12 @@
 **Stack:** ChatGPT Sites, Site-hosted MCP tools, D1 relational storage, optional R2 for media.
 **Replaces:** Python CGI, Apache log collector, static rebuild/atomic symlink activation.
 
+## Engineering constraints
+
+- **Minimal code is a primary architectural goal:** reduce total source size, duplicated logic, dependencies, server state, and endpoints through refactoring, preserving readability, authorization, and regression coverage.
+- Prefer ChatGPT Sites' provided hosting, analytics, storage and identity features before writing a parallel implementation; avoid introducing an external backend or paid API unless an explicitly approved requirement cannot be met otherwise.
+- Every added feature must justify its ongoing code and operational cost. A TODO item is not implementation authorization.
+
 ## 1. Runtime topology
 
 ~~~text
