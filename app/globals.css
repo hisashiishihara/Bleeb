@@ -89,3 +89,63 @@ html, body { background:#ffffff; color:#25282a; }
 .draft-delete-button:focus-visible{outline:2px solid #a13c38;outline-offset:3px}
 .draft-delete-button:disabled{opacity:.5;cursor:not-allowed}
 .draft-delete-error{font-size:12px;color:#a13c38}
+
+/* Full-entry journal home, date archive and tag navigation. Reader-only styles. */
+.site-header{gap:16px}
+.site-header nav{display:flex;flex-wrap:wrap;column-gap:18px;row-gap:10px;justify-content:flex-end}
+.journal-intro{padding:58px 0 62px}
+.journal-intro h1{font-size:clamp(36px,5.4vw,58px);margin:12px 0}
+.journal-feed{max-width:780px;margin:0 auto}
+.feed-entry{padding:49px 0 60px;border-bottom:1px solid #e4e7e7}
+.feed-entry-header h2{font-size:clamp(25px,3.5vw,36px);line-height:1.6;font-weight:600;margin:12px 0 25px;letter-spacing:-.025em}
+.feed-entry-header h2 a:hover{text-decoration:underline;text-underline-offset:5px}
+.feed-date{color:#788083;font-size:12px;margin:0}
+.feed-entry .hero-image{width:100%;height:auto;aspect-ratio:auto;max-height:600px;object-fit:contain;object-position:center;background:#fff;margin:15px 0 18px}
+.feed-entry .article-summary{margin:20px 0 5px}
+.feed-entry .prose{padding:18px 0 10px}
+.reader-tags{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}
+.reader-tags .tag{margin:0}
+.feed-permalink{font-size:13px;color:#365a61;margin:25px 0 0}
+.feed-permalink a:hover{text-decoration:underline}
+.feed-navigation{max-width:780px;margin:38px auto 0;display:flex;flex-wrap:wrap;gap:12px 26px}
+.feed-navigation a,.archive-more{font-size:14px;color:#365a61;text-decoration:underline;text-underline-offset:4px}
+.reader-archive{max-width:840px;margin:0 auto;padding:67px 0 40px}
+.reader-index-header{padding-bottom:38px}
+.reader-index-header h1{font-size:clamp(32px,5vw,50px);margin:15px 0}
+.reader-index-header p:last-child{color:#657175;font-size:14px;line-height:1.9}
+.reader-search{padding:23px 0 36px;border-top:1px solid #e5e7e7}
+.reader-search>label{display:block;font-size:14px;font-weight:600;margin-bottom:14px}
+.reader-search-fields{display:flex;gap:10px;flex-wrap:wrap}
+.reader-search-fields input,.reader-search-fields select{min-height:42px;border:1px solid #ccd2d2;border-radius:4px;font:inherit;font-size:13px;background:#fff;color:#303739;padding:10px}
+.reader-search-fields input[type=search]{flex:2;min-width:200px}
+.reader-search-fields select{flex:1;min-width:140px}
+.reader-search-fields input[name=tag]{flex:1;min-width:125px}
+.reader-search-fields button{min-height:42px;background:#365a61;color:#fff;border:0;border-radius:4px;padding:9px 18px;cursor:pointer}
+.archive-months{padding:0 0 45px}
+.archive-months h2{font-size:16px;margin:0 0 16px}
+.archive-month-links{display:flex;flex-wrap:wrap;gap:10px}
+.archive-month-links a{border:1px solid #dee2e2;border-radius:4px;padding:9px 12px;font-size:13px}
+.archive-month-links a[aria-current=page]{color:#fff;background:#365a61;border-color:#365a61}
+.archive-month-links span{font-size:11px;color:inherit;opacity:.7;padding-left:4px}
+.archive-active-filters{color:#626e73;font-size:13px;line-height:1.9;margin:20px 0}
+.archive-active-filters a{text-decoration:underline}
+.reader-archive-item{padding:27px 0;border-bottom:1px solid #e6e9e9}
+.reader-archive-item time{font-size:12px;color:#7c8588}
+.reader-archive-item h3{font-size:20px;line-height:1.6;margin:10px 0}
+.reader-archive-item h3 a:hover{text-decoration:underline}
+.reader-archive-item p{font-size:14px;color:#657175;line-height:1.8}
+.archive-more{display:inline-block;margin-top:27px}
+.tag-index{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 22px;margin:10px 0 40px}
+.tag-index-link{border-bottom:1px solid #e5e8e8;padding:20px 0;display:flex;justify-content:space-between;gap:15px;align-items:center;font-size:15px}
+.tag-index-link span:last-child{font-size:12px;color:#738184;white-space:nowrap}
+@media(max-width:650px){
+ .site-header nav{column-gap:12px;font-size:11px}
+ .journal-intro{padding:43px 0 48px}
+ .feed-entry{padding:35px 0 43px}
+ .feed-entry-header h2{font-size:26px}
+ .reader-archive{padding:43px 0 30px}
+ .reader-search-fields{flex-direction:column}
+ .reader-search-fields input,.reader-search-fields select,.reader-search-fields button{width:100%;flex:auto}
+ .reader-search-fields input[type=search]{min-width:0}
+ .archive-month-links{gap:8px}
+}
