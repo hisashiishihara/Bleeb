@@ -1,7 +1,6 @@
 import { tools } from "../../plugin/tool-definitions";
 import { authorizedOwner, database, dispatch } from "../../lib/store";
 import { DiaryError } from "../../lib/input";
-import { MAX_MCP_UPLOAD_BODY_CHARS } from "../../lib/base64-image";
 
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
@@ -9,12 +8,7 @@ export async function POST(request: Request) {
   const headers = { "Cache-Control": "private, no-store" };
   try {
     const text = await request.text();
-    if (text.length > MAX_MCP_UPLOAD_BODY_CHARS) throw new DiaryError("too_large", "Request too large", 413);
-    const rpc = JSON.parse(text);
-    // Keep the original small RPC cap except for authenticated Base64 uploads.
-    if (rpc?.method !== "tools/call" || rpc?.params?.name !== "upload_media") {
-      if (text.length > 180000) throw new DiaryError("too_large", "Request too large", 413);
-    }
+    if (text.length > 180000) throw new DiaryError("too_large", "Request too large", 413);
     id = rpc.id ?? null;
     if (rpc.jsonrpc !== "2.0") throw new Error("Invalid JSON-RPC");
     if (rpc.method === "server/discover") return Response.json({jsonrpc:"2.0",id,result:{supportedVersions:["2026-07-28"],capabilities:{tools:{}}}}, {headers});
