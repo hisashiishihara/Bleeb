@@ -18,7 +18,7 @@ export default async function RootLayout({children}:{children:ReactNode}) {
       <div className="shell">
         <header className="site-header">
           <a className="brand" href="/" aria-label="観測と思考 ホーム">観測と思考</a>
-          <nav aria-label="サイトメニュー"><a href="/">記事一覧</a>{isOwner ?
+          <nav aria-label="サイトメニュー"><a href="/">最新記事</a><a href="/archive">過去ログ</a><a href="/tags">タグ</a><a href="/archive#search">検索</a>{isOwner ?
             <a href="/owner/archive">オーナー画面</a> :
             <a href="/signin-with-chatgpt?return_to=%2Fowner%2Farchive" target="_top">オーナーログイン</a>}</nav>
         </header>
