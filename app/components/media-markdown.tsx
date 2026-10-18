@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
 import {ArticleToc} from "./article-toc";
+import {MermaidDiagram} from "./mermaid-diagram";
 import {ArticleChart,StockEmbed,TweetEmbed,YouTubeEmbed} from "./article-embeds";
 import { MEDIA_ID_RE } from "../../lib/media-rules";
 
@@ -17,6 +18,7 @@ export function MediaMarkdown({body}:{body:string}){
     const p=children.props as {className?:string;children?:React.ReactNode};
     const source=typeof p.children==="string"?p.children.trim():"";
     if(p.className==="language-chart"&&source.length<=20000)return <ArticleChart source={source}/>;
+    if(p.className==="language-mermaid"&&source.length<=20000)return <MermaidDiagram source={source}/>;
     if(p.className==="language-stock"&&source.length<=100)return <StockEmbed symbol={source}/>;
     if(p.className==="language-x"&&source.length<=100)return <TweetEmbed id={source}/>;
     if(p.className==="language-youtube"&&source.length<=100)return <YouTubeEmbed id={source}/>;
