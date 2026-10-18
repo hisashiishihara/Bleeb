@@ -15,6 +15,7 @@
 | P1 | RSS, sitemap, canonical and OGP | Publish metadata only for genuinely public articles; honor noindex policy. |
 | P1 | Related articles | Derive from existing tags and SQL; avoid embeddings. |
 | P1 | Sites Analytics evaluation | Prefer built-in analytics; remove redundant tracking only after checking feature parity. |
+| P2 | Four article visibility tiers | Plan **owner-only**, **registered users**, **paid registered users**, and **public**. Current active tiers remain owner/public; registration, billing, and entitlement checks are disabled. Design and verify trusted login, payment/expiry checks, server-side read authorization, and private media access before enabling either additional tier. No billing implementation is authorized by this TODO. |
 | P2 | Scheduled posts | Validate supported scheduling first; no VPS dependency. |
 | P2 | note / social distribution | Extend current export; use external APIs only with separate approval. |
 | P2 | Voice-to-article | Use ChatGPT voice plus existing MCP save tools. |
