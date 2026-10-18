@@ -16,6 +16,19 @@ test("reader-facing title is 観測と思考; aiDiary is only the engine credit"
  assert.doesNotMatch(home,/TECHNOLOGY \/ NOTES \/ IDEAS/);
 });
 
+test("header navigation follows verified owner state instead of fixed login link",()=>{
+ const layout=read("app/layout.tsx");
+ const reader=read("lib/reader.ts");
+ assert.match(layout,/export const dynamic = "force-dynamic"/);
+ assert.match(layout,/const isOwner = \(await currentViewer\(\)\)\.owner/);
+ assert.match(layout,/\{isOwner \?/);
+ assert.match(layout,/<a href="\/owner\/archive">オーナー画面<\/a>/);
+ assert.match(layout,/href="\/signin-with-chatgpt\?return_to=%2Fowner%2Farchive"/);
+ assert.match(reader,/requestIdentity\(new Headers\(await headers\(\)\)\)/);
+ assert.match(reader,/ownerIdentity\(identity,config\.AI_DIARY_OWNER_EMAIL\)/);
+ assert.match(reader,/AI_DIARY_OWNER_API_ENABLED==="true"/);
+});
+
 test("site background is explicitly pure white and remains responsive",()=>{
  const css=read("app/globals.css");
  assert.match(css,/html,\s*body\s*\{\s*background:\s*#ffffff\s*;/);
