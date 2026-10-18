@@ -6,6 +6,20 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 
 **Status (2026-10-17):** The owner Site has validated authenticated MCP operations. GitHub source now declares thirteen owner MCP tools, including working Base64 `upload_media` and the new `upload_chatgpt_image` fileParams bridge for ChatGPT-generated images. The native fileParams path still requires real-site validation after deployment. See [MCP upload gate](docs/MCP_UPLOAD_MEDIA.md). New additions to GitHub do not automatically deploy to Sites.
 
+## Reader navigation
+
+- **Home `/`:** the three newest articles are displayed in full, including
+  Markdown, images, dates and links to their permanent article pages.
+- **Date archive `/archive`:** browse published articles by month (JST), in
+  reverse chronological order, with pagination.
+- **Tags `/tags`:** see tag counts and filter the archive using the exact tag.
+- **Search `/archive?q=...`:** simple D1 substring search over the latest
+  article titles, summaries and Markdown bodies; no external Google dependency.
+- All reader queries check `status=published` and visibility on the server:
+  anonymous visitors cannot find drafts or owner-only posts. The owner can
+  browse their own published owner-only posts, while drafts stay solely in the
+  private management archive. Search results are not publicly indexed (noindex).
+
 ## Implementation
 
 - Browser-based Markdown editor at `/owner/new` and `/owner/archive/{id}/edit`, supporting manual revisions, preview, explicit publish/withdraw, and private R2 media uploads.
