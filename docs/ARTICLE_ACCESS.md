@@ -1,5 +1,7 @@
 # Article audiences and membership
 
+For the implemented D1 schema, including the historical members table and active publication pointers, see [DATABASE.md](DATABASE.md).
+
 Implemented 2026-10-17. This document supersedes the future-audience section of ACCESS_AND_REFERRERS.md. Sites remains owner-private; no public rollout or payment integration is authorized.
 
 | Article audience | Owner | Active paid member | Registered member | Anonymous / unregistered |
