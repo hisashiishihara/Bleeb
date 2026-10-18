@@ -37,7 +37,7 @@ the browser upload. Only JPEG, PNG, WebP and GIF are accepted. The
 `image_base64` tool remains available for older clients.
 
 The allowlist is `AI_DIARY_CHATGPT_FILE_HOSTS`, defaulting to
-`files.oaiusercontent.com,*.oaiusercontent.com`. If real files come from
+`files.oaiusercontent.com,*.oaiusercontent.com,oaisdmntprkoreacentral.blob.core.windows.net`. The Azure Blob hostname is the exact transfer endpoint observed during the October 2026 owner-site failure; no Azure-wide wildcard is allowed. If real files come from
 a different OpenAI-controlled hostname, inspect the authenticated failure
 privately and explicitly add **only** that exact trusted hostname. Never
 allow arbitrary public URLs, wildcard TLDs, local hosts, or attacker
