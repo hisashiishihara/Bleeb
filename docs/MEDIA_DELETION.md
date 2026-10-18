@@ -9,7 +9,7 @@ record. This is **not** the same as removing Markdown text from an article.
 Past revision records are append-only and remain intact. Any old revision that
 contained a link to the deleted media will still have that text, but the media URL
 returns 404. To protect currently displayed articles, the deletion action refuses
-a file referenced by the selected published revision, regardless of visibility.
+a file referenced by the latest reader-visible revision of a published article, regardless of visibility.
 
 ## Interfaces
 
@@ -25,7 +25,7 @@ a file referenced by the selected published revision, regardless of visibility.
   automatically or inferred from a vague reference.
 
 If the owner wants to remove a file in an existing published article, first
-save a revision without the Markdown reference and explicitly select/publish
+save a new revision without the Markdown reference (it becomes reader-visible immediately on already-published articles); explicitly publish only if a publication-state or audience change is intended
 that revision. Then perform file deletion.
 
 The R2 operation precedes D1 deletion so errors never discard the only stored
@@ -46,6 +46,6 @@ D1 deletion in the Site before reporting completion.
   existing media upload/read behavior and the original seven MCP tools.
 - The eighth MCP tool must be explicitly registered/reconnected; updating
   GitHub alone does not automatically update the connected plugin interface.
-- Validate 409 for media referenced by the current published revision;
+- Validate 409 for media referenced by the latest reader-visible revision of a published article;
   verify same-origin and forged-header denial; verify unrelated assets untouched.
 - Do not claim permanent deletion if the R2 or D1 verification was not done.
