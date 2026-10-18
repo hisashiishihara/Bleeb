@@ -361,6 +361,28 @@ export async function importMediaFromUrl(db:DB,args:unknown){
 }
 
 
+/** Commit a newly stored R2 asset, deleting unused bytes on failure or
+ * when another request with the same idempotency key already won.
+ */
+async function commitUploadedMedia(db:DB,input:HeroArgs,id:string,req:string,
+ asset:Awaited<ReturnType<typeof createMedia>>,operation:"upload_media"|"upload_chatgpt_image",inlineMarkdown:string){
+ try{
+  let result:Record<string,unknown>;
+  if(input.usage==="hero"){
+   result=await newHeroRevision(db,{...input,hero_media_id:asset.id},operation,
+    {media_id:asset.id,media_url:asset.url});
+  }else{
+   result=await mutate(db,req,operation,
+    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:inlineMarkdown},[]);
+  }
+  if(result.media_id!==asset.id)await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  return result;
+ }catch(error){
+  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
+  throw error;
+ }
+}
+
 /** Owner-only MCP upload. The caller must actually supply the Base64 bytes:
  * a ChatGPT image attachment is not implicitly readable by this tool.
  */
@@ -379,26 +401,9 @@ export async function uploadMedia(db:DB,args:unknown){
   throw new DiaryError("invalid_input","Image alt text must be at most 200 characters",400);
  const image=decodeBase64Image(input.image_base64,input.content_type,input.file_name);
  const asset=await createMedia(db,bucket(),id,image);
- try{
-  let response:Record<string,unknown>;
-  if(input.usage==="hero"){
-   response=await newHeroRevision(db,{...input,hero_media_id:asset.id},"upload_media",
-    {media_id:asset.id,media_url:asset.url});
-  }else{
-   const alt=typeof input.alt_text==="string"?input.alt_text:asset.id;
-   const cleanAlt=alt.replace(/[\[\]\\\n\r]/g," ").slice(0,200);
-   const markdown="!["+cleanAlt+"]("+asset.url+")";
-   response=await mutate(db,req,"upload_media",
-    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown},[]);
-  }
-  // Another identical request may have committed while bytes were stored.
-  // Avoid leaking a duplicate object when idempotency returns that response.
-  if(response.media_id!==asset.id)await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
-  return response;
- }catch(error){
-  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
-  throw error;
- }
+ const alt=typeof input.alt_text==="string"?input.alt_text:asset.id;
+ const cleanAlt=alt.replace(/[\\[\\]\\\\\\n\\r]/g," ").slice(0,200);
+ return commitUploadedMedia(db,input,id,req,asset,"upload_media","!["+cleanAlt+"]("+asset.url+")");
 }
 
 
@@ -422,21 +427,7 @@ export async function uploadChatGPTImage(db:DB,args:unknown){
  const hosts=(env as unknown as {AI_DIARY_CHATGPT_FILE_HOSTS?:string}).AI_DIARY_CHATGPT_FILE_HOSTS;
  const image=await downloadChatGPTImage(input.file,hosts);
  const asset=await createMedia(db,bucket(),id,image);
- try{
-  let result:Record<string,unknown>;
-  if(input.usage==="hero"){
-   result=await newHeroRevision(db,{...input,hero_media_id:asset.id},"upload_chatgpt_image",
-    {media_id:asset.id,media_url:asset.url});
-  }else{
-   result=await mutate(db,req,"upload_chatgpt_image",
-    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:asset.markdown},[]);
-  }
-  if(result.media_id!==asset.id)await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
-  return result;
- }catch(error){
-  await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
-  throw error;
- }
+ return commitUploadedMedia(db,input,id,req,asset,"upload_chatgpt_image",asset.markdown);
 }
 
 export async function dispatch(db: DB, action: string, args: unknown) {
