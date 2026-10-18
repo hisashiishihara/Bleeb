@@ -1,11 +1,16 @@
 import React, {isValidElement} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {ArticleChart,StockEmbed,TweetEmbed} from "./article-embeds";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypeHighlight from "rehype-highlight";
+import rehypeSlug from "rehype-slug";
+import {ArticleToc} from "./article-toc";
+import {ArticleChart,StockEmbed,TweetEmbed,YouTubeEmbed} from "./article-embeds";
 import { MEDIA_ID_RE } from "../../lib/media-rules";
 
 export function MediaMarkdown({body}:{body:string}){
- return <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{
+ return <><ArticleToc body={body}/><ReactMarkdown skipHtml remarkPlugins={[remarkGfm,remarkMath]} rehypePlugins={[rehypeKatex,[rehypeHighlight,{detect:false}],rehypeSlug]} components={{
   table:({children})=><div className="article-table-scroll" tabIndex={0} role="region" aria-label="記事の表"><table>{children}</table></div>,
   pre:({children})=>{
    if(isValidElement(children)){
@@ -14,6 +19,7 @@ export function MediaMarkdown({body}:{body:string}){
     if(p.className==="language-chart"&&source.length<=20000)return <ArticleChart source={source}/>;
     if(p.className==="language-stock"&&source.length<=100)return <StockEmbed symbol={source}/>;
     if(p.className==="language-x"&&source.length<=100)return <TweetEmbed id={source}/>;
+    if(p.className==="language-youtube"&&source.length<=100)return <YouTubeEmbed id={source}/>;
    }
    return <pre>{children}</pre>;
   },
@@ -26,5 +32,5 @@ export function MediaMarkdown({body}:{body:string}){
    }
    return <img src={src} alt={alt||""} loading="lazy"/>;
   }
- }}>{body}</ReactMarkdown>;
+ }}>{body}</ReactMarkdown></>;
 }
