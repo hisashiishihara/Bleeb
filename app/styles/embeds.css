@@ -19,3 +19,19 @@
 .article-table-scroll tbody tr:nth-child(even){background:rgba(96,120,118,.06)}
 .article-table-scroll th[align=right],.article-table-scroll td[align=right]{text-align:right}
 .article-table-scroll th[align=center],.article-table-scroll td[align=center]{text-align:center}
+
+/* Article navigation, footnotes, math and highlighted code. */
+.article-toc{margin:1.5em 0;padding:12px 18px;border:1px solid #dfe5e3;border-radius:5px;font-size:.9em}
+.article-toc summary{cursor:pointer;font-weight:650}
+.article-toc ol{margin:.8em 0;padding-left:1.5em}
+.article-toc li{margin:.35em 0}
+.article-toc .toc-subheading{margin-left:1em}
+.prose :is(h2,h3,h4,h5,h6)[id]{scroll-margin-top:1rem}
+.prose .footnotes{border-top:1px solid #dfe5e3;font-size:.85em;margin-top:3em;padding-top:1em}
+.prose .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden}
+.prose pre code.hljs{display:block;background:transparent;color:inherit;padding:0}
+.prose pre .hljs-keyword,.prose pre .hljs-selector-tag{color:#d4a7ed}
+.prose pre .hljs-string{color:#a7d7b9}
+.prose pre .hljs-number{color:#e5c79b}
+.prose pre .hljs-comment{color:#91a4ad}
+.article-external-embed iframe[src*="youtube"]{aspect-ratio:16/9;min-height:0}
