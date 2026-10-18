@@ -1,5 +1,22 @@
 # aiDiary
 
+**ChatGPT との会話を、そのままブログ制作の入口に。** aiDiary は ChatGPT から下書き作成・推敲・画像設定・公開を操作できる、個人向けブログアプリです。現在の実装は **ChatGPT Sites + Site-hosted MCP プラグインに特化**しています。別途 NUC/VPS や WordPress を動かす必要はありません（ChatGPT Sites の利用権限と初期セットアップは必要です）。
+
+*aiDiary is a conversation-first personal blogging app built specifically for ChatGPT Sites and its Site-hosted MCP plugin.*
+
+## はじめに
+
+- [導入ガイド（ChatGPT Sites に自分のブログを構築）](docs/GETTING_STARTED.md)
+- [使い方（ChatGPT で下書き・修正・公開）](docs/USAGE.md)
+- [ソースコードのライセンス（Modified BSD / BSD-3-Clause）](LICENSE)
+- [Sites の公式ガイド](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites)
+
+> **ご注意:** これは「リポジトリを複製するだけで自動公開される」サービスではありません。各自の ChatGPT Sites でアプリを配置し、D1/R2、所有者認証、MCP プラグインの接続を確認してください。最初は Site を所有者限定にし、テスト記事で動作を検証することを推奨します。記事の `public` 設定と Site 自体のアクセス公開は別物です。
+
+## ライセンス
+
+このリポジトリのプロジェクト独自コードは **修正 BSD ライセンス（BSD-3-Clause）**で提供します。ソース・バイナリの再配布および改変、商用利用は条項に従って可能です。著作権表示、ライセンス文、免責事項を保持し、権利者や貢献者の名前を無断で推奨・宣伝に使用しないでください。詳細は [LICENSE](LICENSE) を参照してください。依存ライブラリ・外部サービスには、それぞれのライセンス・利用規約が適用されます。
+
 **Site title:** 「観測と思考」 — a reader-facing personal journal with a pure white editorial design. **aiDiary** remains the software/engine name, independently reusable by other authors. The Site must be redeployed separately after a source change; title/theme changes never publish or modify entries.
 
 Conversation-first personal publishing: privately save and revise Markdown from ChatGPT, then **explicitly publish** selected revisions to a readable Japanese technical blog.
@@ -65,4 +82,4 @@ See [Sites deployment handoff](docs/SITES_HANDOFF.md), [real owner-auth validati
 
 Canonical documents: [Requirements](docs/REQUIREMENTS.md), [Design](docs/DESIGN.md), [Roadmap](docs/ROADMAP.md).
 
-Planned license: BSD-3-Clause. No release should be tagged before platform acceptance.
+License: BSD-3-Clause (see [LICENSE](LICENSE)). No release should be tagged before platform acceptance.

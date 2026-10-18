@@ -132,7 +132,7 @@ RSS, tags, search, context export, and topic timelines may follow after the core
 
 ## 9. Legal and licensing
 
-Planned project license is BSD-3-Clause. Only publish content the author has authorized and has rights to share. Review privacy and platform policies before public launch.
+The project code is licensed under BSD-3-Clause (the Modified BSD License); see [LICENSE](../LICENSE). Only publish content the author has authorized and has rights to share. Review privacy and platform policies before public launch.
 
 
 ## Article access update (2026-10-17)
