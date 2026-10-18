@@ -38,6 +38,8 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 
 ## Implementation
 
+- [D1 database design: tables, relationships, indexes and migration order](docs/DATABASE.md).
+
 - Browser-based Markdown editor at `/owner/new` and `/owner/archive/{id}/edit`, supporting manual revisions, preview, explicit publish/withdraw, and private R2 media uploads.
 - Owner archive provides a **下書きを削除** action on draft entries only. It requires owner authentication, a confirmed click, and current revision matching; published articles cannot be deleted. All draft revisions, D1 media records and R2 objects are permanently removed. A storage failure retains the D1 draft for retry. This browser operation is intentionally not exposed as an MCP tool.
 - **Latest-visible revisions:** after an article is explicitly published, new saved revisions (including hero updates) immediately appear to the article's *existing authorized audience*. Drafts stay private; changing visibility or unpublishing still requires an explicit owner action. `published_revision` remains a historical legacy pointer.
