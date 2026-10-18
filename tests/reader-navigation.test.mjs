@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { readableRecentFull } from "../lib/reader-store.ts";
+import { homeExcerpt } from "../lib/home-excerpt.ts";
 import { parseArchiveFilters,readableArchive,readableArchiveMonths,readableTagCounts } from "../lib/reader-archive.ts";
 
 const anon={owner:false,registered:false,paid:false};
@@ -83,10 +84,20 @@ test("filter parsing is bounded, and reader pages do not use owner archive",()=>
  assert.equal(parseArchiveFilters({q:"x".repeat(110)}).q.length,100);
  const home=read("app/page.tsx"),archive=read("app/archive/page.tsx"),tags=read("app/tags/page.tsx");
  assert.match(home,/readableRecentFull\(database\(\),await currentViewer\(\),3\)/);
- assert.match(home,/<MediaMarkdown body=\{post\.body_md\}/);
+ assert.match(home,/<MediaMarkdown body=\{homeExcerpt\(post\.body_md\)\}/);
+ assert.match(home,/続きを読む/);
  assert.match(archive,/readableArchive\(db,viewer,filters\)/);
  assert.match(tags,/readableTagCounts\(database\(\),await currentViewer\(\)\)/);
  for(const page of [archive,tags])assert.match(page,/index:false,follow:false/);
  assert.match(read("app/layout.tsx"),/href="\/archive"/);
  assert.match(read("app/layout.tsx"),/href="\/tags"/);
+});
+
+test("homepage excerpt stops within section one at Markdown paragraph boundaries",()=>{
+ const source="序文の説明。\\n\\n## 1. 観測\\n\\n第一段落。\\n\\n第二段落。\\n\\n## 2. 思考\\n\\n秘密の後半。".replaceAll("\\\\n","\\n");
+ const excerpt=homeExcerpt(source,1000);
+ assert.match(excerpt,/## 1\\. 観測/);
+ assert.match(excerpt,/第二段落/);
+ assert.doesNotMatch(excerpt,/## 2\\.|秘密の後半/);
+ assert.equal(homeExcerpt("第一段落。\\n\\n```stock\\nNASDAQ:ADBE\\n```".replaceAll("\\\\n","\\n")), "第一段落。");
 });
