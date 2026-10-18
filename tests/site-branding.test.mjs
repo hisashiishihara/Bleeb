@@ -30,7 +30,9 @@ test("header navigation follows verified owner state instead of fixed login link
 });
 
 test("site background is explicitly pure white and remains responsive",()=>{
- const css=read("app/globals.css");
+ const css=read("app/styles/theme.css");
+ const layout=read("app/globals.css");
+ assert.match(layout,/@import "\.\/styles\/theme\.css"/);
  assert.match(css,/html,\s*body\s*\{\s*background:\s*#ffffff\s*;/);
  assert.match(css,/\.site-header\s*\{/);
  assert.match(css,/@media\(max-width:650px\)/);
