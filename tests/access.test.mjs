@@ -251,6 +251,16 @@ test("trusted HTTPS image import saves R2 and hero revision, respects existing p
   assert.equal((await readableEntry(db,entry.slug)).hero_media_id,imported.media_id);
   assert.equal((await readableMedia(db,imported.media_id,false)).id,imported.media_id);
   assert.equal(stored.size,1);
+  // A conflicting operation must never reuse the image import's request ID.
+  await assert.rejects(store.clearHeroMedia(db,{entry_id:entry.entry_id,expected_revision:2,
+   request_id:idempotency}),e=>e.code==="request_conflict");
+  // Stale requests must be rejected before fetching or writing to R2.
+  let fetchCount=0;
+  globalThis.fetch=async()=>{fetchCount++;throw new Error("unexpected download");};
+  await assert.rejects(store.importMediaFromUrl(db,{...args,request_id:req(),
+   expected_revision:1}),e=>e.code==="stale_revision");
+  assert.equal(fetchCount,0);
+  assert.equal(stored.size,1);
   await assert.rejects(store.importMediaFromUrl(db,{...args,request_id:req(),source_url:"http://images.example.com/x.png",expected_revision:2}),e=>e.status===400);
  }finally{
   sqlite.close();
