@@ -10,11 +10,99 @@
 
 ## Rich articles
 
-Bleeb can render **tables, syntax-highlighted code, Mermaid diagrams, Chart.js charts, math, YouTube videos, X posts and TradingView stock charts**. Ask ChatGPT to include them in your Markdown draft.
+Bleeb renders rich content from **ordinary Markdown**. You can ask ChatGPT to write it for you, or paste these examples into the browser editor. Always preview before publishing.
 
-For embedded content, use fenced blocks named `mermaid`, `chart`, `youtube`, `x`, or `stock`. A stock block contains a market symbol such as `NASDAQ:AAPL`; a YouTube block contains the 11-character video ID. Chart blocks accept validated JSON for bar, line, pie or doughnut charts.
+### Tables, code and math
 
-External embeds may contact third parties when loaded. Preview your article before publishing and confirm the Site's current support.
+Use standard GitHub-flavored Markdown tables:
+
+```markdown
+| Feature | Status |
+| --- | --- |
+| Mermaid | Supported |
+| Charts | Supported |
+```
+
+For colored source code, specify a language such as `python`, `typescript`, `bash` or `sql`:
+
+````markdown
+```python
+print('Hello from Bleeb')
+```
+````
+
+Math uses KaTeX syntax: inline `$E=mc^2$`, or a display equation:
+
+````markdown
+$$
+E = mc^2
+$$
+````
+
+### Mermaid diagrams
+
+Use a fenced `mermaid` block. For example:
+
+````markdown
+```mermaid
+flowchart LR
+  A[ChatGPT conversation] --> B[Save draft]
+  B --> C[Publish with Bleeb]
+```
+````
+
+### Chart.js charts
+
+Use `chart` followed by JSON. Chart types: `bar`, `line`, `pie`, `doughnut`.
+
+````markdown
+```chart
+{
+  "type": "bar",
+  "title": "Posts per month",
+  "labels": ["July", "August", "September"],
+  "datasets": [{"label": "Posts", "data": [3, 5, 4]}]
+}
+```
+````
+
+The chart is interactive, and a data table is provided beneath it. Only validated chart JSON is accepted; it does not execute JavaScript.
+
+### YouTube, X and stock charts
+
+Paste the **YouTube video ID**, not the full URL:
+
+````markdown
+```youtube
+dQw4w9WgXcQ
+```
+````
+
+For an X post, use its numeric post ID:
+
+````markdown
+```x
+1234567890123456789
+```
+````
+
+For a **TradingView** stock chart, use an exchange-qualified ticker:
+
+````markdown
+```stock
+NASDAQ:AAPL
+```
+````
+
+YouTube and X embeds wait for the reader to click before loading third-party content. The stock chart is browser-lazy-loaded but may contact TradingView without a click. Availability depends on those external services.
+
+### More Markdown features
+
+- **Automatic table of contents:** articles with at least two level-2 or level-3 headings get a collapsible contents list.
+- **Footnotes:** use `[^1]` in the text and define `[^1]: Source details.` elsewhere.
+- **Images and short videos:** use Bleeb's media upload and insertion tools; a hero image can be assigned separately.
+
+See [Article embeds](ARTICLE_EMBEDS.md) for supported limits and technical details.
 
 ## Browser editor
 
