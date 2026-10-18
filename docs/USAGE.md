@@ -143,6 +143,12 @@ Replace the placeholders with real media IDs (UUIDs) from your own article. A vi
 
 See [Article embeds](ARTICLE_EMBEDS.md) for format limits and rendering details.
 
+## Share an article to note
+
+In the owner's saved-article editor, click **「note に転載（コピーして開く）」**. Bleeb copies a note-friendly version of the latest saved revision as rich text and opens note's new-post editor in another tab. **Paste the article, set the title, check the formatting and publish manually.** Bleeb never submits or publishes to note automatically.
+
+The button requires clipboard access and permission to open a new tab. Save any unsaved changes first. Images and videos are represented by placeholders and must be uploaded separately on note; complex Mermaid, chart and stock embeds may need manual adaptation. The existing MT-format download remains available.
+
 ## Browser editor
 
 - `/owner/new` — create a draft.
