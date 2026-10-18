@@ -30,7 +30,8 @@
     "github-slugger": "2.0.0",
     "remark-parse": "11.0.0",
     "unified": "11.0.5",
-    "mdast-util-to-string": "4.0.0"
+    "mdast-util-to-string": "4.0.0",
+    "highlight.js": "11.11.1"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
