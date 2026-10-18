@@ -59,6 +59,18 @@ test("after saving a visible revision without image, R2 and D1 are both deleted"
   assert.deepEqual(await deleteMedia(f.db,f.r2,mediaId),{media_id:mediaId,deleted:false});
  }finally{f.sqlite.close();}
 });
+test("latest hero image blocks deletion even when published_revision points to old content",async()=>{
+ const f=fixture();try{
+  f.sqlite.prepare("UPDATE entries SET visibility='public' WHERE id=?").run(entryId);
+  f.sqlite.prepare("UPDATE entry_revisions SET body_md=?, hero_media_id=? WHERE entry_id=? AND revision=2")
+    .run("Current article without inline media",mediaId,entryId);
+  assert.equal((await ownerArticleMedia(f.db,entryId)).assets[0].in_published_revision,true);
+  await assert.rejects(()=>deleteMedia(f.db,f.r2,mediaId,entryId),
+    e=>e.code==="media_in_published_revision"&&e.status===409);
+  assert.deepEqual(f.events,[]);
+  assert.equal(f.bytes.has(key),true);
+ }finally{f.sqlite.close();}
+});
 test("R2 deletion failure retains D1 metadata for retry",async()=>{
  const f=fixture();try{
   f.sqlite.prepare("UPDATE entries SET status='draft',published_revision=NULL WHERE id=?").run(entryId);
