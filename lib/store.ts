@@ -402,7 +402,7 @@ export async function uploadMedia(db:DB,args:unknown){
  const image=decodeBase64Image(input.image_base64,input.content_type,input.file_name);
  const asset=await createMedia(db,bucket(),id,image);
  const alt=typeof input.alt_text==="string"?input.alt_text:asset.id;
- const cleanAlt=alt.replace(/[\\[\\]\\\\\\n\\r]/g," ").slice(0,200);
+ const cleanAlt=alt.replace(/[\[\]\\\n\r]/g," ").slice(0,200);
  return commitUploadedMedia(db,input,id,req,asset,"upload_media","!["+cleanAlt+"]("+asset.url+")");
 }
 
