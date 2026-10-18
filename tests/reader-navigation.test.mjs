@@ -94,10 +94,10 @@ test("filter parsing is bounded, and reader pages do not use owner archive",()=>
 });
 
 test("homepage excerpt stops within section one at Markdown paragraph boundaries",()=>{
- const source="序文の説明。\\n\\n## 1. 観測\\n\\n第一段落。\\n\\n第二段落。\\n\\n## 2. 思考\\n\\n秘密の後半。".replaceAll("\\\\n","\\n");
+ const source=["序文の説明。","## 1. 観測","第一段落。","第二段落。","## 2. 思考","秘密の後半。"].join("\n\n");
  const excerpt=homeExcerpt(source,1000);
- assert.match(excerpt,/## 1\\. 観測/);
+ assert.match(excerpt,/## 1\. 観測/);
  assert.match(excerpt,/第二段落/);
- assert.doesNotMatch(excerpt,/## 2\\.|秘密の後半/);
- assert.equal(homeExcerpt("第一段落。\\n\\n```stock\\nNASDAQ:ADBE\\n```".replaceAll("\\\\n","\\n")), "第一段落。");
+ assert.doesNotMatch(excerpt,/## 2\.|秘密の後半/);
+ assert.equal(homeExcerpt(["第一段落。","```stock\nNASDAQ:ADBE\n```"].join("\n\n")), "第一段落。");
 });
