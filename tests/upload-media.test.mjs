@@ -18,5 +18,5 @@ test("remaining upload paths share idempotent R2 cleanup",()=>{
  }
  const helper=source.split("async function commitUploadedMedia(")[1]?.split("\\n}\\n")[0];
  assert.ok(helper?.includes("if(result.media_id!==asset.id)await deleteMedia("));
- assert.ok(helper?.includes("}catch(error){\\n  await deleteMedia("));
+ assert.ok(helper?.includes("}catch(error){\n  await deleteMedia("));
 });
