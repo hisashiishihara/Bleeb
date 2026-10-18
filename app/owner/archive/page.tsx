@@ -1,6 +1,7 @@
 import { database } from "../../../lib/store";
 import { requireOwnerPage } from "../../../lib/owner-page";
 import { searchOwnerArchive } from "../../../lib/owner-archive";
+import { DeleteDraftButton } from "../../components/delete-draft-button";
 
 export const dynamic="force-dynamic";
 export const revalidate=0;
@@ -41,7 +42,7 @@ export default async function OwnerArchive({searchParams}:Props){
         {(filters.q||filters.tag)&&<p>r{e.matched_revision} に一致{e.matched_revision!==e.latest_revision?"（過去のリビジョン）":""}</p>}
         <h3><a href={"/owner/archive/"+encodeURIComponent(e.id)+"?revision="+e.matched_revision}>{e.title}</a></h3>
         {e.summary&&<p>{e.summary}</p>}
-        <p><a className="editor-edit-link" href={"/owner/archive/"+encodeURIComponent(e.id)+"/edit"}>✎ Markdown を編集</a></p>
+        <div className="archive-actions"><a className="editor-edit-link" href={"/owner/archive/"+encodeURIComponent(e.id)+"/edit"}>✎ Markdown を編集</a>{e.status==="draft"&&<DeleteDraftButton entryId={e.id} revision={e.latest_revision} title={e.title}/>}</div>
         {tags(e.tags_json).map(tag=><span className="tag" key={tag}>{tag}</span>)}
       </article>)}</div>}
     {hasMore&&<a className="back-link" href={"/owner/archive?"+next.toString()}>さらに表示 →</a>}
