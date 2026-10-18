@@ -54,7 +54,7 @@ Do not interpret `published_revision` as a frozen snapshot: the current reader j
 
 `lib/media-store.ts` writes bytes to R2, then registers the `media_assets` row in D1, attempting cleanup if the D1 insert fails. URL and ChatGPT-image upload paths perform subsequent revision/idempotency operations and attempt to remove unused assets after errors or duplicate submissions. Because D1 and R2 are separate stores, these steps are **not a single cross-store atomic transaction**; review failure and retry paths when changing the implementation.
 
-Public media reads in `lib/media-store.ts` check whether the media is referenced by the **current `latest_revision`** of a published, public article. However, `lib/media-deletion.ts` checks references in **`published_revision`** before deleting an individual asset. These selectors differ; do not assume the existing deletion check fully protects newly saved revisions of an already-published entry. Resolve this discrepancy with dedicated tests and a separate code fix before altering media-deletion behavior.
+Public media reads in `lib/media-store.ts` check whether the media is referenced by the **current `latest_revision`** of a published, public article. `lib/media-deletion.ts` now checks the **current `latest_revision`** for published articles when protecting referenced media, matching the reader-visible revision. Regression tests cover an older `published_revision` pointer.
 
 ## Migration order
 
