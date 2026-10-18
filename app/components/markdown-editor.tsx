@@ -43,6 +43,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [uploading,setUploading]=useState(false);
  const [preview,setPreview]=useState(false);
  const [message,setMessage]=useState("");
+ const [noteCopy,setNoteCopy]=useState<{html:string;text:string;title:string}|null>(null);
  const [error,setError]=useState("");
  const navigating=useRef(false);
  const mediaInput=useRef<HTMLInputElement>(null);
@@ -53,6 +54,35 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   window.addEventListener("beforeunload",warn);
   return ()=>window.removeEventListener("beforeunload",warn);
  },[dirty]);
+ useEffect(()=>{
+  setNoteCopy(null);
+  if(!initial.id||!revision||dirty)return;
+  const controller=new AbortController();
+  void fetch("/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=full&format=clipboard&revision="+revision,{
+   credentials:"same-origin",signal:controller.signal
+  }).then(async response=>{
+   if(!response.ok)throw new Error("note export unavailable");
+   return response.json() as Promise<{html:string;text:string;title:string}>;
+  }).then(data=>{if(!controller.signal.aborted)setNoteCopy(data);}).catch(()=>{});
+  return ()=>controller.abort();
+ },[initial.id,revision,dirty]);
+ async function copyToNote(){
+  if(!noteCopy||dirty||busy||uploading)return;
+  setError("");setMessage("");
+  const tab=window.open("about:blank","_blank");
+  try{
+   if(!navigator.clipboard?.write||!window.ClipboardItem)throw new Error("このブラウザでは書式付きコピーを利用できません。");
+   await navigator.clipboard.write([new ClipboardItem({
+    "text/html":new Blob([noteCopy.html],{type:"text/html"}),
+    "text/plain":new Blob([noteCopy.text],{type:"text/plain"})
+   })]);
+   if(tab){tab.location.href="https://note.com/notes/new";setMessage("本文をコピーしました。noteの本文欄に貼り付け、タイトルを「"+noteCopy.title+"」にしてから確認・公開してください。");}
+   else setMessage("本文をコピーしました。ポップアップがブロックされたため、note.com/notes/new を開いて貼り付けてください。");
+  }catch(e){
+   tab?.close();
+   setError(messageForError(e,"コピーに失敗しました。ブラウザのクリップボード権限を確認してください。"));
+  }
+ }
  const tags=()=>tagsText.split(",").map(s=>s.trim()).filter(Boolean);
  async function importMarkdown(file:File|undefined){
   if(!file)return;
@@ -241,6 +271,8 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    </section>}
    {initial.id&&revision&&<section className="editor-publication">
       <h2>note用に書き出す</h2>
+      <p>「note に転載」で書式付き本文をコピーし、note の新規投稿画面を開きます。貼り付け・画像の追加・タイトル設定・公開は手動です。</p>
+      <div className="editor-actions"><button type="button" className="editor-primary" disabled={!noteCopy||dirty||busy||uploading} onClick={()=>void copyToNote()}>{noteCopy?"note に転載（コピーして開く）":"note 用データを準備中…"}</button></div>
       <p>保存済みの最新版 r{revision} をnoteのMT形式（.txt）に変換します。noteへ自動投稿・公開はしません。</p>
       {dirty?<p className="editor-hint">未保存の変更があります。先に保存してから書き出してください。</p>:
         <div className="editor-actions">
