@@ -71,3 +71,18 @@ dQw4w9WgXcQ
 ```
 
 The visitor clicks to load from `youtube-nocookie.com`; a normal YouTube link is always available. Embedding can be disabled by third-party privacy or content restrictions.
+
+## Mermaid diagrams
+Write Mermaid markup in a standard fenced block:
+
+```mermaid
+sequenceDiagram
+  participant User as 利用者
+  participant ChatGPT
+  participant aiDiary
+  User->>ChatGPT: 記事を作成
+  ChatGPT->>aiDiary: save_draft
+  aiDiary-->>User: 下書き保存
+```
+
+The diagram renderer is loaded lazily in the browser and uses Mermaid's `securityLevel: "strict"`. Author-provided HTML and script execution are not enabled. If rendering fails, the original diagram source remains available in a disclosure below the figure. Diagram syntax is a Mermaid subset of UML notation, not a full UML interchange implementation.
