@@ -10,11 +10,22 @@ const file=(url="https://files.oaiusercontent.com/temp/test.png?X-Amz-Signature=
 test("ChatGPT native fileParam has required four-field shape and strict host defaults",()=>{
  assert.deepEqual(parseChatGPTFile(file()).file_id,"file_test-abc");
  assert.ok(chatGPTFileHosts().includes("files.oaiusercontent.com"));
+ assert.ok(chatGPTFileHosts().includes("oaisdmntprkoreacentral.blob.core.windows.net"));
+ assert.ok(!chatGPTFileHosts().includes("*.blob.core.windows.net"));
  for(const invalid of ["sandbox:/mnt/data/image.png",undefined,null,"file_test",{download_url:"https://files.oaiusercontent.com/test.png"}])
   assert.throws(()=>parseChatGPTFile(invalid),{code:"invalid_file"});
  assert.equal(parseChatGPTFile({...file(),mime_type:"application/octet-stream"}).mime_type,"application/octet-stream");
  assert.throws(()=>parseChatGPTFile({...file(),mime_type:"text/html"}),{code:"invalid_media"});
  assert.throws(()=>parseChatGPTFile({...file(),file_name:""}),{code:"invalid_file"});
+});
+
+test("ChatGPT Azure Blob transfer host is accepted but neighboring hosts and redirects remain blocked",async()=>{
+ const trusted="https://oaisdmntprkoreacentral.blob.core.windows.net/container/image.png?sig=secret";
+ const fetched=await downloadChatGPTImage(file(trusted),undefined,async()=>new Response(bytes,{headers:{"Content-Type":"image/png"}}));
+ assert.equal(fetched.type,"image/png");
+ for(const bad of ["https://other.blob.core.windows.net/image.png","https://oaisdmntprkoreacentral.blob.core.windows.net.attacker.example/image.png"])
+  await assert.rejects(downloadChatGPTImage(file(bad),undefined,async()=>{throw Error("must not fetch")}),{code:"image_host_not_allowed"});
+ await assert.rejects(downloadChatGPTImage(file(trusted),undefined,async()=>new Response(null,{status:302,headers:{Location:"https://other.blob.core.windows.net/x.png"}})),{code:"image_host_not_allowed"});
 });
 
 test("download generated PNG over signed HTTPS URL with octet-stream and no forwarded credentials",async()=>{
