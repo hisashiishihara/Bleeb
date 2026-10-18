@@ -35,3 +35,11 @@
 .prose pre .hljs-number{color:#e5c79b}
 .prose pre .hljs-comment{color:#91a4ad}
 .article-external-embed iframe[src*="youtube"]{aspect-ratio:16/9;min-height:0}
+
+/* Mermaid is rendered locally and scrolls horizontally on narrow screens. */
+.article-mermaid{max-width:100%;margin:2rem 0;overflow-x:auto}
+.article-mermaid-graphic{min-height:2rem;text-align:center}
+.article-mermaid-graphic svg{height:auto;max-width:100%}
+.article-mermaid figcaption{font-size:.85em;color:#647376}
+.article-mermaid details{font-size:.85em;margin-top:.75rem}
+.article-mermaid pre{text-align:left}
