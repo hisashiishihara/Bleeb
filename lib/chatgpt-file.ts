@@ -12,7 +12,7 @@ export type ChatGPTFile = {
   mime_type?: string;
   file_name?: string;
 };
-const DEFAULT_HOSTS = "files.oaiusercontent.com,*.oaiusercontent.com";
+const DEFAULT_HOSTS = "files.oaiusercontent.com,*.oaiusercontent.com,oaisdmntprkoreacentral.blob.core.windows.net";
 export function chatGPTFileHosts(configured?: string): string[] {
   return configuredImageHosts(configured === undefined ? DEFAULT_HOSTS : configured);
 }
