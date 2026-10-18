@@ -4,6 +4,17 @@
 
 *aiDiary is a conversation-first personal blogging app built specifically for ChatGPT Sites and its Site-hosted MCP plugin.*
 
+## ChatGPT Plus で追加ホスティング契約なしのブログ
+
+**ChatGPT Plus に現在含まれる Sites ホスティングを活用し、自分のブログを ChatGPT との会話から運営する。** aiDiary は ChatGPT Sites と Site-hosted MCP に特化したオープンソースのブログアプリです。
+
+- **追加の VPS / レンタルサーバー契約は不要:** Sites ホスティングは現在 ChatGPT Plus / Pro に含まれます。別途 OpenAI API の従量課金を前提としません。
+- **会話からブログを操作:** 下書き、編集、画像設定、明示的な公開・非公開化を ChatGPT で操作できます。
+- **データの正本は D1 と R2:** 記事とリビジョンは D1、画像・動画は R2 に保存します。会話の全文を勝手に公開しません。
+- **BSD-3-Clause:** 他の開発者も自分の Site に導入・改変できます。
+
+> **「追加料金なし」の条件:** ChatGPT Plus 自体は有料です。Sites ホスティングが Plus / Pro に含まれるのは現在の提供条件で、Codex による作成・編集の利用枠、サイトの使用量・ストレージ上限が適用されます。独自ドメインなど外部サービスは別途費用がかかる場合があります。最新情報は [OpenAI 公式 Sites ガイド](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites) を確認してください。新規導入には対応プラン・権限・初期設定が必要です。
+
 ## はじめに
 
 - [導入ガイド（ChatGPT Sites に自分のブログを構築）](docs/GETTING_STARTED.md)
