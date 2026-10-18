@@ -98,7 +98,7 @@ function jpDate(value: string): string {
 }
 export function noteExport(
   entry: NoteExportEntry, revision: NoteExportRevision, mode: NoteMode, origin: string
-): {filename:string;content:string;sourceUrl:string|null} {
+): {filename:string;content:string;sourceUrl:string|null;html:string} {
   if(mode!=="excerpt"&&mode!=="full")throw new Error("Invalid note export mode");
   const visible=entry.status==="published" && entry.visibility==="public" &&
     entry.latest_revision===revision.revision;
@@ -117,5 +117,5 @@ export function noteExport(
     ...(tagList.length ? ["TAGS: "+tagList.map(tag=>'"'+cleanHeader(tag).replace(/"/g,'""')+'"').join(",")] : [])
   ];
   const content=header.join("\n")+"\n-----\nBODY:\n"+markup+"\n-----\n--------\n";
-  return {filename:"aiDiary-note-"+entry.id.slice(0,8)+"-r"+revision.revision+"-"+mode+".txt",content,sourceUrl};
+  return {filename:"aiDiary-note-"+entry.id.slice(0,8)+"-r"+revision.revision+"-"+mode+".txt",content,sourceUrl,html:markup};
 }
