@@ -8,6 +8,14 @@
 
 **Important:** Saving a new draft does not publish it. However, edits to an *already published* article become visible to its current audience immediately. Create a separate draft if you need to work privately on major changes.
 
+## Rich articles
+
+Bleeb can render **tables, syntax-highlighted code, Mermaid diagrams, Chart.js charts, math, YouTube videos, X posts and TradingView stock charts**. Ask ChatGPT to include them in your Markdown draft.
+
+For embedded content, use fenced blocks named `mermaid`, `chart`, `youtube`, `x`, or `stock`. A stock block contains a market symbol such as `NASDAQ:AAPL`; a YouTube block contains the 11-character video ID. Chart blocks accept validated JSON for bar, line, pie or doughnut charts.
+
+External embeds may contact third parties when loaded. Preview your article before publishing and confirm the Site's current support.
+
 ## Browser editor
 
 - `/owner/new` — create a draft.
