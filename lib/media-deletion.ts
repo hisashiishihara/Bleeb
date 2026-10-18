@@ -21,11 +21,11 @@ export async function deleteMedia(
  if(expectedEntryId!==undefined && media.entry_id!==expectedEntryId)
   throw new DiaryError("not_found","Media not found in the selected article",404);
 
- // Do not break the selected published revision, even for an owner-only article.
- // The owner must first save and publish a revision without this attachment.
+ // Do not break the latest reader-visible revision, even for an owner-only article.
+ // The owner must first save a new revision without this attachment.
  const active=await db.prepare(
   "SELECT r.body_md,r.hero_media_id FROM entries e JOIN entry_revisions r ON "+
-  "r.entry_id=e.id AND r.revision=e.published_revision "+
+  "r.entry_id=e.id AND r.revision=e.latest_revision "+
   "WHERE e.id=? AND e.status='published' AND e.published_revision IS NOT NULL"
  ).bind(media.entry_id).first<{body_md:string;hero_media_id:string|null}>();
  if(active && (referencesMedia(active.body_md,mediaId)||active.hero_media_id===mediaId))
@@ -53,7 +53,7 @@ export async function ownerArticleMedia(db:D1Database,articleId:string){
  ).bind(articleId).all<AssetSummary>();
  const active=article.status==="published" && article.published_revision!==null
   ?await db.prepare("SELECT body_md,hero_media_id FROM entry_revisions WHERE entry_id=? AND revision=?")
-    .bind(articleId,article.published_revision).first<{body_md:string;hero_media_id:string|null}>()
+    .bind(articleId,article.latest_revision).first<{body_md:string;hero_media_id:string|null}>()
   :null;
  return {entry:article,assets:rows.results.map(row=>({
   id:row.id,content_type:row.content_type,byte_size:row.byte_size,
