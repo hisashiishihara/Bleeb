@@ -4,7 +4,7 @@
 
 Conversation-first personal publishing: privately save and revise Markdown from ChatGPT, then **explicitly publish** selected revisions to a readable Japanese technical blog.
 
-**Status (2026-10-17):** The owner Site has validated authenticated MCP operations. GitHub source now declares thirteen owner MCP tools, including working Base64 `upload_media` and the new `upload_chatgpt_image` fileParams bridge for ChatGPT-generated images. The native fileParams path still requires real-site validation after deployment. See [MCP upload gate](docs/MCP_UPLOAD_MEDIA.md). New additions to GitHub do not automatically deploy to Sites.
+**Status (2026-10-17):** The owner Site has validated authenticated MCP operations. GitHub source now declares twelve owner MCP tools, including the `upload_chatgpt_image` fileParams bridge for ChatGPT-generated images. The native fileParams path still requires real-site validation after deployment. See [MCP upload gate](docs/MCP_UPLOAD_MEDIA.md). New additions to GitHub do not automatically deploy to Sites.
 
 ## Reader navigation
 
@@ -36,7 +36,7 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 - `lib/store.ts`: D1 article CRUD, revision append, publishing/unpublishing, idempotency, owner-only export.
 - `app/api/owner/[action]/route.ts`: owner operations; **disabled by default** until trusted Sites authentication is demonstrated.
 - `drizzle/0000_initial.sql`: initial SQLite/D1 tables.
-- `plugin/tool-definitions.ts`: contracts for the thirteen owner MCP tools served through `app/mcp/route.ts`, including URL import, bounded Base64 image upload and host-resolved ChatGPT image file transfer.
+- `plugin/tool-definitions.ts`: contracts for the twelve owner MCP tools served through `app/mcp/route.ts`, including URL import and host-resolved ChatGPT image file transfer.
 - `scripts/bundle-to-sql.mjs`: offline export bundle to SQL conversion for recovery.
 - `.openai/hosting.json`: Sites data bindings (D1 `DB` and private R2 `MEDIA`) required for the editor and media MCP tools.
 
