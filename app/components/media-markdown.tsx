@@ -11,7 +11,7 @@ import {ArticleChart,StockEmbed,TweetEmbed,YouTubeEmbed} from "./article-embeds"
 import { MEDIA_ID_RE } from "../../lib/media-rules";
 
 export function MediaMarkdown({body}:{body:string}){
- return <><ArticleToc body={body}/><ReactMarkdown skipHtml remarkPlugins={[remarkGfm,remarkMath]} rehypePlugins={[rehypeKatex,[rehypeHighlight,{detect:false}],rehypeSlug]} components={{
+ return <><ArticleToc body={body}/><ReactMarkdown skipHtml remarkPlugins={[remarkGfm,remarkMath]} rehypePlugins={[rehypeKatex,[rehypeHighlight,{detect:false,plainText:["mermaid","chart","stock","x","youtube"]}],rehypeSlug]} components={{
   table:({children})=><div className="article-table-scroll" tabIndex={0} role="region" aria-label="記事の表"><table>{children}</table></div>,
   pre:({children})=>{
    if(isValidElement(children)){
