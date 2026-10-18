@@ -96,13 +96,52 @@ NASDAQ:AAPL
 
 YouTube and X embeds wait for the reader to click before loading third-party content. The stock chart is browser-lazy-loaded but may contact TradingView without a click. Availability depends on those external services.
 
-### More Markdown features
+### Table of contents and footnotes
 
-- **Automatic table of contents:** articles with at least two level-2 or level-3 headings get a collapsible contents list.
-- **Footnotes:** use `[^1]` in the text and define `[^1]: Source details.` elsewhere.
-- **Images and short videos:** use Bleeb's media upload and insertion tools; a hero image can be assigned separately.
+Bleeb automatically adds a collapsible table of contents when an article contains at least two level-2 or level-3 headings:
 
-See [Article embeds](ARTICLE_EMBEDS.md) for supported limits and technical details.
+```markdown
+## Introduction
+An overview of the topic.
+
+### Background
+Details that appear in the table of contents.
+
+## Conclusion
+Key takeaways.
+```
+
+Add footnotes using standard Markdown notation:
+
+```markdown
+Bleeb stores articles in D1.[^storage]
+
+[^storage]: Images and videos are stored separately in R2.
+```
+
+### Images and videos
+
+Upload your image or video through ChatGPT or the owner editor. Then insert the media URL returned by Bleeb:
+
+```markdown
+![Architecture diagram](/media/<image-id>)
+![video:Demo clip](/media/<video-id>)
+```
+
+Replace the placeholders with real media IDs (UUIDs) from your own article. A video uses the `video:` prefix inside the image alt text. **Cover images are set separately** through Bleeb's hero-image action; an upload alone does not publish the file.
+
+### Other Markdown formatting
+
+```markdown
+> A useful quote from the discussion.
+
+**Bold**, *italic*, and [a source link](https://example.com).
+
+- A bullet point
+- Another bullet point
+```
+
+See [Article embeds](ARTICLE_EMBEDS.md) for format limits and rendering details.
 
 ## Browser editor
 
