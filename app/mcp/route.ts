@@ -9,6 +9,7 @@ export async function POST(request: Request) {
   try {
     const text = await request.text();
     if (text.length > 180000) throw new DiaryError("too_large", "Request too large", 413);
+    const rpc = JSON.parse(text);
     id = rpc.id ?? null;
     if (rpc.jsonrpc !== "2.0") throw new Error("Invalid JSON-RPC");
     if (rpc.method === "server/discover") return Response.json({jsonrpc:"2.0",id,result:{supportedVersions:["2026-07-28"],capabilities:{tools:{}}}}, {headers});
