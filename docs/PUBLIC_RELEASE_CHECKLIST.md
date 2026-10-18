@@ -1,13 +1,13 @@
-# Public OSS release checklist
+# Bleeb public OSS release checklist
 
-aiDiary is intended as a **ChatGPT Sites-specific, conversation-first CMS**. Current Sites hosting is included in ChatGPT Plus / Pro subscriptions (subject to eligibility, Codex usage and hosting/storage limits). This is **not a claim that the Plus subscription itself is free**, nor a promise of perpetual zero cost. [Official terms](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites).
+Bleeb is intended as a **ChatGPT Sites-specific, conversation-first CMS**. Current Sites hosting is included in ChatGPT Plus / Pro subscriptions (subject to eligibility, Codex usage and hosting/storage limits). This is **not a claim that the Plus subscription itself is free**, nor a promise of perpetual zero cost. [Official terms](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites).
 
 ## Required before switching this repository from Private to Public
 
-- [ ] Perform a **full Gitleaks Git history and working-tree secret scan** on a fresh clone. The preliminary Actions heuristic scan passed (183 commits, 330 unique text blobs, zero high-confidence matches); this does **not** replace Gitleaks, manual verification or inspection of unreferenced objects. Review any findings; rotate exposed credentials, and handle history rewriting only with an explicit plan.
+- [x] Run Gitleaks against the reachable Git history on a clean CI checkout: **198 commits scanned, no leaks found** (2026-10-18). Also ran the supplementary 199-commit / 346-text-blob heuristic scan. Review inaccessible/unreferenced history and credentials stored outside Git separately; no scanner is perfect.
 - [ ] Inspect `.openai/hosting.json`, GitHub Actions workflows, deployment files and source history for real owner identity, tokens, credentials, private URLs, signed download URLs, internal access IDs, article contents, backups and test artifacts. Do not publish real Site secrets or user data.
-- [ ] Verify the exact new-user setup flow from a **separate clean Plus account and empty test Site**: import source, D1/R2 bindings, migrations, trusted owner authentication, MCP connection, test article save/edit/publish/unpublish, media upload, and anonymous access.
-- [ ] Confirm the Site's **public sharing** is configured separately from the article's `public` visibility, and private drafts/owner routes are inaccessible to anonymous readers.
+- [ ] Independent clean Plus-account install: not available for this release review; **do not claim independently verified one-click setup**. Preserve the documented manual install limitations.
+- [ ] Recheck live Site sharing and anonymous access before changing the Site audience: GitHub code inspection found owner checks on MCP/write APIs, published-article authorization, private media authorization, and tests for rejected spoofed identities. **Live sharing policy was not inspected in this review.**
 - [ ] Run `npm test`, `npm run typecheck`, `npm run build` and review the most recent CI run.
 - [ ] Check LICENSE, dependencies, examples, README claims, data-retention expectations and the platform's current Sites availability/pricing limits.
 - [ ] Have the owner explicitly approve switching GitHub visibility to Public. Do **not** automatically change the Site audience or publish private blog content.
