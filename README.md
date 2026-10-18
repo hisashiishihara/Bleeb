@@ -18,6 +18,7 @@
 ## はじめに
 
 - [導入ガイド（ChatGPT Sites に自分のブログを構築）](docs/GETTING_STARTED.md)
+- [OSS 公開前のセキュリティ・導入検証チェックリスト](docs/PUBLIC_RELEASE_CHECKLIST.md)
 - [使い方（ChatGPT で下書き・修正・公開）](docs/USAGE.md)
 - [ソースコードのライセンス（Modified BSD / BSD-3-Clause）](LICENSE)
 - [Sites の公式ガイド](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites)
