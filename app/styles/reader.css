@@ -14,7 +14,8 @@
 .reader-tags{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}
 .reader-tags .tag{margin:0}
 .feed-permalink{font-size:13px;color:#365a61;margin:25px 0 0}
-.feed-permalink a:hover{text-decoration:underline}
+.feed-permalink a{display:inline-flex;align-items:center;min-height:40px;padding:9px 18px;border:1px solid #365a61;border-radius:5px;font-weight:600;text-decoration:none;transition:background-color .15s,color .15s}
+.feed-permalink a:hover,.feed-permalink a:focus-visible{background:#365a61;color:#fff;text-decoration:none}
 .feed-navigation{max-width:780px;margin:38px auto 0;display:flex;flex-wrap:wrap;gap:12px 26px}
 .feed-navigation a,.archive-more{font-size:14px;color:#365a61;text-decoration:underline;text-underline-offset:4px}
 .reader-archive{max-width:840px;margin:0 auto;padding:67px 0 40px}
