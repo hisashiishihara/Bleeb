@@ -402,3 +402,111 @@ test("note export is owner-only, read-only and revision-locked",async()=>{
   assert.match(await now.text(),/https:\/\/test\.example\.invalid\/posts\//);
  }finally{sqlite.close();}
 });
+
+
+test("draft deletion is owner-only, revision guarded, idempotent, and removes all draft records",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const entry=await store.saveDraft(db,{title:"DELETE THIS DRAFT",body_md:"Original",request_id:req()});
+  await store.updateEntry(db,{entry_id:entry.entry_id,expected_revision:1,title:"DELETE THIS DRAFT",body_md:"Revised",request_id:req()});
+  const url="https://test.example.invalid/api/owner/delete_draft";
+  const request=(revision,headers={},request_id=req())=>new Request(url,{
+    method:"POST",headers:{"Content-Type":"application/json",...headers},
+    body:JSON.stringify({entry_id:entry.entry_id,expected_revision:revision,request_id})
+  });
+  for(const unauthorized of [{},{"oai-authenticated-user-id":"forged","oai-authenticated-user-email":"other@example.invalid"}]){
+   assert.equal((await ownerApi(request(2,unauthorized),{params:Promise.resolve({action:"delete_draft"})})).status,403);
+  }
+  const csrf=await ownerApi(request(2,{...ownerHeaders,Origin:"https://attacker.invalid"}),{params:Promise.resolve({action:"delete_draft"})});
+  assert.equal(csrf.status,403);
+  const stale=await ownerApi(request(1,ownerHeaders),{params:Promise.resolve({action:"delete_draft"})});
+  assert.equal(stale.status,409);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM entries").first()).n,1);
+  const rid=req();
+  const success=await ownerApi(request(2,ownerHeaders,rid),{params:Promise.resolve({action:"delete_draft"})});
+  assert.equal(success.status,200);
+  assert.equal((await success.json()).deleted,true);
+  for(const table of ["entries","entry_revisions","media_assets","referrer_daily"])
+   assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM "+table).first()).n,0);
+  const replay=await ownerApi(request(2,ownerHeaders,rid),{params:Promise.resolve({action:"delete_draft"})});
+  assert.equal(replay.status,200);
+  assert.equal((await replay.json()).deleted,true);
+  const old=await ownerApi(request(2,ownerHeaders),{params:Promise.resolve({action:"delete_draft"})});
+  assert.equal(old.status,404);
+  assert.equal((await store.listEntries(db,{})).entries.length,0);
+ }finally{sqlite.close();}
+});
+
+test("published entries cannot be deleted, including owner-only articles",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const entry=await store.saveDraft(db,{title:"PROTECT THIS ARTICLE",body_md:"Permanent text",request_id:req()});
+  await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"owner",request_id:req()});
+  await assert.rejects(store.deleteDraft(db,{entry_id:entry.entry_id,expected_revision:1,request_id:req()}),
+    e=>e.code==="not_a_draft"&&e.status===409);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).revision.body_md,"Permanent text");
+  // Draft delete is browser-only, and not an undisclosed 14th MCP tool.
+  const m=await mcp(new Request("https://test.example.invalid/mcp",{method:"POST",headers:ownerHeaders,
+   body:JSON.stringify({jsonrpc:"2.0",id:4,method:"tools/call",params:{name:"delete_draft",
+    arguments:{entry_id:entry.entry_id,expected_revision:1,request_id:req()}}})}));
+  const response=(await m.json()).result;
+  assert.equal(response.isError,true);
+  assert.equal(tools.length,13);
+  assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).entry.status,"published");
+ }finally{sqlite.close();}
+});
+
+test("deleting draft media removes its R2 bytes, D1 media, history and referrer rows",async()=>{
+ const {db,sqlite}=fixture();
+ const previous=globalThis.__diaryTestEnv.MEDIA;
+ const keys=new Set(),events=[];
+ const storage={
+  async delete(key){events.push("delete");keys.delete(key);},
+  async head(key){events.push("head");return keys.has(key)?{key}:null;}
+ };
+ globalThis.__diaryTestEnv.MEDIA=storage;
+ try{
+  const entry=await store.saveDraft(db,{title:"Draft with media",body_md:"illustration",request_id:req()});
+  const id="550e8400-e29b-41d4-a716-446655440000";
+  const key="entries/"+entry.entry_id+"/"+id;
+  await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,?,?,?,?)")
+   .bind(id,entry.entry_id,key,"image/png",100,"test.png","now").run();
+  keys.add(key);
+  await db.prepare("INSERT INTO referrer_daily(day,entry_id,source_host,hits) VALUES(?,?,?,?)")
+   .bind("2026-10-18",entry.entry_id,"example.com",1).run();
+  const result=await store.deleteDraft(db,{entry_id:entry.entry_id,expected_revision:1,request_id:req()});
+  assert.equal(result.deleted_media,1);
+  assert.deepEqual(events,["delete","head"]);
+  assert.equal(keys.size,0);
+  for(const table of ["entries","entry_revisions","media_assets","referrer_daily"])
+   assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM "+table).first()).n,0);
+ }finally{globalThis.__diaryTestEnv.MEDIA=previous;sqlite.close();}
+});
+
+test("R2 removal failures prevent D1 draft deletion; retries safely remove it",async()=>{
+ const {db,sqlite}=fixture();
+ const previous=globalThis.__diaryTestEnv.MEDIA;
+ const keys=new Set(),events=[];
+ let fail=true;
+ globalThis.__diaryTestEnv.MEDIA={
+  async delete(key){events.push("delete");if(fail)throw Error("R2 unavailable");keys.delete(key);},
+  async head(key){events.push("head");return keys.has(key)?{key}:null;}
+ };
+ try{
+  const entry=await store.saveDraft(db,{title:"Draft R2 failure",body_md:"x",request_id:req()});
+  const id="650e8400-e29b-41d4-a716-446655440000";
+  const key="entries/"+entry.entry_id+"/"+id;keys.add(key);
+  await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,?,?,?,?)")
+   .bind(id,entry.entry_id,key,"image/png",100,"test.png","now").run();
+  await assert.rejects(store.deleteDraft(db,{entry_id:entry.entry_id,expected_revision:1,request_id:req()}),
+   e=>e.status===503&&e.code==="media_delete_failed");
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM entries").first()).n,1);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM entry_revisions").first()).n,1);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM media_assets").first()).n,1);
+  assert.ok(keys.has(key));
+  fail=false;
+  const result=await store.deleteDraft(db,{entry_id:entry.entry_id,expected_revision:1,request_id:req()});
+  assert.equal(result.deleted,true);
+  assert.equal(keys.size,0);
+ }finally{globalThis.__diaryTestEnv.MEDIA=previous;sqlite.close();}
+});
