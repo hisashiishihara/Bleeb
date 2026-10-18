@@ -71,7 +71,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   setError("");setMessage("");
   const tab=window.open("about:blank","_blank");
   try{
-   if(!navigator.clipboard?.write||!window.ClipboardItem)throw new Error("このブラウザでは書式付きコピーを利用できません。");
+   if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("このブラウザでは書式付きコピーを利用できません。");
    await navigator.clipboard.write([new ClipboardItem({
     "text/html":new Blob([noteCopy.html],{type:"text/html"}),
     "text/plain":new Blob([noteCopy.text],{type:"text/plain"})
