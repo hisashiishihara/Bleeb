@@ -274,6 +274,15 @@ export async function exportEntries(db: DB, args: unknown) {
 }
 
 
+/** Replay a completed mutation before performing external image I/O. */
+async function priorMediaMutation(db:DB,id:string,operation:string):Promise<Record<string,unknown>|null>{
+ const existing=await prior(db,id);
+ if(!existing)return null;
+ if(existing.operation!==operation)
+  throw new DiaryError("request_conflict","Request ID used for another operation",409);
+ return JSON.parse(existing.response_json) as Record<string,unknown>;
+}
+
 /** Shared revision precondition for owner media uploads.
  * Keep this check before reading bytes or writing to R2.
  */
@@ -287,11 +296,8 @@ async function requireCurrentMediaRevision(db: DB, id: string, value: unknown): 
 type HeroArgs=Record<string,unknown>;
 async function newHeroRevision(db:DB,input:HeroArgs,action:string,mediaResult?:Record<string,unknown>){
  const id=entryId(input.entry_id),req=requestId(input.request_id);
- const existing=await prior(db,req);
- if(existing){
-  if(existing.operation!==action)throw new DiaryError("request_conflict","Request ID used for another operation",409);
-  return JSON.parse(existing.response_json);
- }
+ const replay=await priorMediaMutation(db,req,action);
+ if(replay)return replay;
  const expected=revisionNumber(input.expected_revision);
  const article=await requireEntry(db,id);
  if(article.latest_revision!==expected)throw new DiaryError("stale_revision","Expected "+expected+", current "+article.latest_revision,409);
@@ -330,11 +336,8 @@ export async function clearHeroMedia(db:DB,args:unknown){
 export async function importMediaFromUrl(db:DB,args:unknown){
  const input=args as HeroArgs;
  const id=entryId(input.entry_id),req=requestId(input.request_id);
- const existing=await prior(db,req);
- if(existing){
-  if(existing.operation!=="import_media_from_url")throw new DiaryError("request_conflict","Request ID used for another operation",409);
-  return JSON.parse(existing.response_json);
- }
+ const replay=await priorMediaMutation(db,req,"import_media_from_url");
+ if(replay)return replay;
  await requireCurrentMediaRevision(db,id,input.expected_revision);
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline");
@@ -375,12 +378,8 @@ async function commitUploadedMedia(db:DB,input:HeroArgs,id:string,req:string,
 export async function uploadChatGPTImage(db:DB,args:unknown){
  const input=args as HeroArgs;
  const id=entryId(input.entry_id),req=requestId(input.request_id);
- const existing=await prior(db,req);
- if(existing){
-  if(existing.operation!=="upload_chatgpt_image")
-   throw new DiaryError("request_conflict","Request ID used for another operation",409);
-  return JSON.parse(existing.response_json);
- }
+ const replay=await priorMediaMutation(db,req,"upload_chatgpt_image");
+ if(replay)return replay;
  await requireCurrentMediaRevision(db,id,input.expected_revision);
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline");
