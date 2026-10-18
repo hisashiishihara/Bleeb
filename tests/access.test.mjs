@@ -49,7 +49,7 @@ test("owner read diagnostics return the exact runtime tools/list without writes"
   const response=await (await mcp(request("tools/call",{name:"list_entries",arguments:{limit:1}},ownerHeaders))).json();
   const result=JSON.parse(response.result.content[0].text);
   assert.deepEqual(result.mcp_diagnostics.tools_list,direct.result);
-  assert.equal(result.mcp_diagnostics.tools_list.tools.length,13);
+  assert.equal(result.mcp_diagnostics.tools_list.tools.length,12);
   const image=result.mcp_diagnostics.tools_list.tools.find(t=>t.name==="upload_chatgpt_image");
   assert.deepEqual(image._meta["openai/fileParams"],["file"]);
   const denied=await (await mcp(request("tools/call",{name:"list_entries",arguments:{limit:1}}))).json();
@@ -409,7 +409,7 @@ test("published entries cannot be deleted, including owner-only articles",async(
     arguments:{entry_id:entry.entry_id,expected_revision:1,request_id:req()}}})}));
   const response=(await m.json()).result;
   assert.equal(response.isError,true);
-  assert.equal(tools.length,13);
+  assert.equal(tools.length,12);
   assert.equal((await store.getEntry(db,{entry_id:entry.entry_id})).entry.status,"published");
  }finally{sqlite.close();}
 });
