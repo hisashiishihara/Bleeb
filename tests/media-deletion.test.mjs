@@ -35,16 +35,18 @@ function fixture(){
  };
  return {sqlite,db,r2,bytes,events,setFail(v){fail=v}};
 }
-test("active published revision blocks deleting its file, even if owner-only",async()=>{
+test("latest reader-visible revision protects its file even when the publish pointer is older",async()=>{
  const f=fixture();try{
+  f.sqlite.prepare("UPDATE entry_revisions SET body_md=? WHERE entry_id=? AND revision=2").run("![current](/media/"+mediaId+")",entryId);
   await assert.rejects(()=>deleteMedia(f.db,f.r2,mediaId,entryId),e=>e.code==="media_in_published_revision"&&e.status===409);
+  assert.equal((await ownerArticleMedia(f.db,entryId)).assets[0].in_published_revision,true);
   assert.deepEqual(f.events,[]);
   assert.equal(f.sqlite.prepare("SELECT count(*) AS n FROM media_assets").get().n,1);
  }finally{f.sqlite.close();}
 });
-test("after publishing a new revision without image, R2 and D1 are both deleted",async()=>{
+test("after saving a visible revision without image, R2 and D1 are both deleted",async()=>{
  const f=fixture();try{
-  f.sqlite.prepare("UPDATE entries SET published_revision=2 WHERE id=?").run(entryId);
+  // The old published revision still references the image, but readers use revision 2.
   const list=await ownerArticleMedia(f.db,entryId);
   assert.equal(list.assets.length,1);
   assert.equal(list.assets[0].in_published_revision,false);
