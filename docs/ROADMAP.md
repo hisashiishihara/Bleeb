@@ -2,6 +2,28 @@
 
 **Revised:** 2026-10-17. This roadmap replaces the previous Python CGI/Apache delivery plan.
 
+## Engineering principle: minimal software (2026-10-18)
+
+**Keep aiDiary as small as possible.** Prefer deleting code, removing unnecessary abstractions, and reusing existing Sites/ChatGPT capabilities over adding modules, state, dependencies, endpoints or services. Refactoring should **reduce total code volume and cognitive complexity**, while preserving documented behavior, privacy, authorization and test coverage. Do not optimize for line count by obscuring logic or weakening safety checks. Track changed lines, duplicated logic and dependency count; justify any net growth with a user-visible benefit. No optional feature is automatic approval to implement it.
+
+## Feature backlog (proposals only; no implementation authorized)
+
+| Priority | Candidate | Smallest viable approach / acceptance |
+| --- | --- | --- |
+| P0 | Portable backup and restore | Reuse existing Markdown export; add a verified round-trip from an isolated D1/R2 fixture before adding a new service. This supersedes the older temporary decision to deprioritize production restore; production restore still needs explicit approval. |
+| P0 | Reproducible new Plus account setup | Validate a fresh Site with D1/R2, 12 MCP tools, auth and sample articles using Work; document only missing steps, no installer unless essential. |
+| P1 | Owner preview before publishing | Reuse current reader/Markdown rendering and existing revision store; avoid new tables if possible. Note: public published articles already show latest saves, so a true private staging flow needs explicit design. |
+| P1 | Image optimization | Measure current R2 object sizes; consider WebP resizing only if supported within the hosting runtime without new paid APIs. |
+| P1 | RSS/Atom, sitemap and canonical/OGP | Add only where compatible with current noindex and owner-private Site policy; do not expose private content. |
+| P1 | Related articles/internal links | Start with existing tags and SQL, not embeddings or vector storage. |
+| P1 | Sites Analytics integration decision | Prefer built-in Sites Analytics UI; avoid duplicating page-view counters. Assess whether referrer_daily is still necessary. No public API for analytics export has been confirmed. |
+| P2 | Scheduled publication | First validate a supported scheduler. Do not introduce a VPS/NUC dependency or assume background workers exist. |
+| P2 | note/social distribution | Prefer existing note export and share links; external posting requires separate supported API/consent. |
+| P2 | Voice-to-article | Draft inside ChatGPT voice/transcription, then save via existing MCP. No extra audio backend by default. |
+| Research | AI-assisted web editor | Prefer ChatGPT conversation as the AI frontend. Do not introduce separately billed OpenAI API calls by default. |
+
+**Selection policy:** implement only a user-approved feature; first check whether Sites or an existing tool already solves it. Prefer shrinking/removing existing code to new infrastructure. Every change must pass existing tests, typecheck, build and owner/private data boundaries.
+
 ## Product success criterion
 
 In an ordinary ChatGPT conversation, the author can say:
@@ -81,7 +103,7 @@ Exit: generated summaries always link to and never silently rewrite primary entr
 2. Verify the draft is invisible to an anonymous visitor and public APIs.
 3. Revise and confirm previous revision remains recoverable.
 4. Explicitly publish a revision; verify public URL and no frontend redeployment.
-5. Save a newer draft revision; verify published page still shows the old revision.
+5. Save a newer revision to the already-published article; verify its latest revision becomes visible to the existing audience without changing visibility.
 6. Publish that new revision; verify new public content.
 7. Unpublish; verify all public read surfaces stop serving it.
 8. Export and restore; compare title, Markdown, timestamps, status and revisions.
