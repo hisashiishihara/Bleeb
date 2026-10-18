@@ -22,6 +22,9 @@ export async function POST(request: Request) {
     if (rpc.method !== "tools/call") return Response.json({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}}, {headers});
     try {
       authorizedOwner(request);
+      // Browser-only actions such as draft deletion must not become hidden MCP tools.
+      if (!tools.some(tool => tool.name === rpc.params?.name))
+        throw new DiaryError("not_found","Unknown MCP tool",404);
       const result = await dispatch(database(), rpc.params?.name, rpc.params?.arguments ?? {});
       if (rpc.params?.name === "list_entries") {
         // Owner-only read diagnostic. Invoke this runtime's exact tools/list
