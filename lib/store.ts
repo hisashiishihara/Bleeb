@@ -167,6 +167,76 @@ export async function publishEntry(db: DB, args: unknown) {
   ]);
 }
 
+/** Permanently remove a draft and its owned media. Never operates on published
+ * entries, even if their visibility is owner-only.
+ * R2 is deleted and verified before any D1 data is removed; a failed R2
+ * operation leaves all D1 records available for a retry.
+ */
+export async function deleteDraft(db: DB, args: unknown) {
+  const input = args as Record<string,unknown>;
+  const id = entryId(input.entry_id);
+  const expected = revisionNumber(input.expected_revision);
+  const req = requestId(input.request_id);
+  const previous = await prior(db,req);
+  if(previous) {
+    if(previous.operation!=="delete_draft") throw new DiaryError("request_conflict","Request ID collision",409);
+    return JSON.parse(previous.response_json);
+  }
+  const entry = await requireEntry(db,id);
+  if(entry.status!=="draft" || entry.published_revision!==null || entry.visibility!=="owner")
+    throw new DiaryError("not_a_draft","Only private drafts can be deleted",409);
+  if(entry.latest_revision!==expected)
+    throw new DiaryError("stale_revision","Draft changed. Reload before deleting",409);
+
+  const media = await db.prepare("SELECT storage_key FROM media_assets WHERE entry_id=?")
+    .bind(id).all<{storage_key:string}>();
+  if(media.results.length) {
+    const storage=bucket();
+    for(const asset of media.results) {
+      // Recheck state between R2 operations; the final D1 batch also guards
+      // against a stale version or an article that became published.
+      const current = await requireEntry(db,id);
+      if(current.status!=="draft" || current.latest_revision!==expected ||
+         current.visibility!=="owner" || current.published_revision!==null)
+        throw new DiaryError("stale_revision","Draft changed during deletion",409);
+      try {
+        await storage.delete(asset.storage_key);
+        if(await storage.head(asset.storage_key))
+          throw new Error("R2 object remains after delete");
+      } catch {
+        throw new DiaryError("media_delete_failed","Could not remove draft media. No article records were deleted; retry",503);
+      }
+    }
+  }
+
+  const allowed="id=? AND status='draft' AND visibility='owner' AND published_revision IS NULL AND latest_revision=?";
+  const response={entry_id:id,status:"deleted",deleted:true,deleted_media:media.results.length};
+  // Conditions on *every* table mutation keep a concurrent publish/edit from
+  // losing any D1 records. They execute inside D1's atomic batch.
+  const statements=[
+    db.prepare("DELETE FROM referrer_daily WHERE entry_id=? AND EXISTS (SELECT 1 FROM entries WHERE "+allowed+")")
+      .bind(id,id,expected),
+    db.prepare("DELETE FROM media_assets WHERE entry_id=? AND EXISTS (SELECT 1 FROM entries WHERE "+allowed+")")
+      .bind(id,id,expected),
+    db.prepare("DELETE FROM entry_revisions WHERE entry_id=? AND EXISTS (SELECT 1 FROM entries WHERE "+allowed+")")
+      .bind(id,id,expected),
+    db.prepare("DELETE FROM entries WHERE "+allowed).bind(id,expected),
+    // changes() reflects the guarded DELETE immediately above. The request is
+    // not marked successful if nothing was removed.
+    db.prepare("INSERT INTO mutation_requests(request_id,operation,response_json,created_at) "+
+      "SELECT ?,'delete_draft',?,? WHERE changes()=1")
+      .bind(req,JSON.stringify(response),NOW())
+  ];
+  try { await db.batch(statements); } catch {
+    const replay=await prior(db,req);
+    if(replay?.operation==="delete_draft")return JSON.parse(replay.response_json);
+    throw new DiaryError("delete_failed","Draft deletion failed. Refresh and try again",409);
+  }
+  if(!await prior(db,req))
+    throw new DiaryError("stale_revision","Draft changed during deletion. Refresh and try again",409);
+  return response;
+}
+
 export async function unpublishEntry(db: DB, args: unknown) {
   const a = args as Record<string,unknown>;
   const id = entryId(a.entry_id);
@@ -374,6 +444,7 @@ export async function dispatch(db: DB, action: string, args: unknown) {
     case "update_entry": return updateEntry(db,args);
     case "publish_entry": return publishEntry(db,args);
     case "unpublish_entry": return unpublishEntry(db,args);
+    case "delete_draft": return deleteDraft(db,args);
     case "export_entries": return exportEntries(db,args);
     case "set_entry_hero_media": return setHeroMedia(db,args);
     case "clear_entry_hero_media": return clearHeroMedia(db,args);
