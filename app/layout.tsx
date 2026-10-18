@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import "./globals.css";
+import "katex/dist/katex.min.css";
+import "highlight.js/styles/github.css";
 import { currentViewer } from "../lib/reader";
 
 // Header navigation must reflect the verified owner for each request.
