@@ -20,6 +20,24 @@
 | P2 | Voice-to-article | Use ChatGPT voice plus existing MCP save tools. |
 | Research | AI web editor | Keep AI work in ChatGPT; no default extra OpenAI API billing. |
 
+## Rich content verification
+
+The following renderers **already exist in the source**; do not reimplement them before testing deployment and writing usage examples.
+
+| Feature | Markdown syntax / renderer | Next action |
+| --- | --- | --- |
+| Mermaid diagrams | `mermaid` fenced code; `MermaidDiagram` | Verify diagram rendering and error handling on the live Site. |
+| Chart.js charts | `chart` fenced JSON; `ArticleChart` | Document supported types: bar, line, pie and doughnut. |
+| Tables | Standard GitHub-flavored Markdown tables | Verify scrolling and mobile layout. |
+| Syntax highlighting | Language-tagged code fences; rehype-highlight | Verify common languages and readable dark/light styling. |
+| YouTube | `youtube` fenced video ID | Check consent-to-load flow and mobile embeds. |
+| Stock charts | `stock` fenced TradingView symbol (e.g. `NASDAQ:AAPL`) | Check third-party availability, privacy and mobile layout. |
+| Math | Inline/block LaTeX with KaTeX | Document examples and validate rendering. |
+| Table of contents | Existing `ArticleToc` | Check heading links and duplicate headings. |
+| X posts | `x` fenced post ID | Check consent-to-load flow and fallback links. |
+
+**Additional candidates:** footnotes, responsive image captions, accessible callouts, and CSV-to-chart paste workflow. First check whether existing Markdown/renderer support covers each; reject features that add disproportionate code or dependency weight.
+
 ## Release gates
 
 - Complete full-history secret audit (including Gitleaks) and independent clean-account setup.
