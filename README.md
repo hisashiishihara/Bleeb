@@ -8,8 +8,7 @@ Conversation-first personal publishing: privately save and revise Markdown from 
 
 ## Reader navigation
 
-- **Home `/`:** the three newest articles are displayed in full, including
-  Markdown, images, dates and links to their permanent article pages.
+- **Home `/`:** the three newest published articles show a Markdown excerpt (through part of section 1 where present), images, dates and a read-more link to their full article pages.
 - **Date archive `/archive`:** browse published articles by month (JST), in
   reverse chronological order, with pagination.
 - **Tags `/tags`:** see tag counts and filter the archive using the exact tag.

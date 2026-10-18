@@ -21,7 +21,7 @@ A valid TradingView symbol includes the exchange prefix:
 NASDAQ:ADBE
 ```
 
-The external iframe is **not loaded** until the reader clicks the button. Real-time prices and availability depend on TradingView and its terms; no market quotes are stored in D1.
+The TradingView iframe loads automatically when the article renders (the iframe itself is lazy-loaded by the browser). This contacts TradingView without a reader click. Real-time prices and availability depend on TradingView and its terms; no market quotes are stored in D1. The stock block currently accepts only the exchange-qualified ticker symbol; `asof` and `range` are not supported.
 
 ## X post
 Use the numeric ID from `https://x.com/<account>/status/<id>`:
