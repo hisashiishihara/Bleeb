@@ -50,6 +50,9 @@ Official docs:
 
 ## 3. Data model
 
+> **Current implemented D1 schema:** [DATABASE.md](DATABASE.md). The SQL below is a historical design sketch and does not include subsequent migrations, media tables or all active constraints. Always use the migrations and DATABASE.md to understand current behavior.
+
+
 Draft articles and published articles have distinct audience states. A post already in published status displays its newest saved revision immediately; no audience expansion is inferred from saving.
 
 Proposed SQLite-compatible schema, to adapt to D1 runtime:
