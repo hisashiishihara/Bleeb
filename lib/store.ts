@@ -275,6 +275,16 @@ export async function exportEntries(db: DB, args: unknown) {
 }
 
 
+/** Shared revision precondition for owner media uploads.
+ * Keep this check before reading bytes or writing to R2.
+ */
+async function requireCurrentMediaRevision(db: DB, id: string, value: unknown): Promise<void> {
+ const expected=revisionNumber(value);
+ const entry=await requireEntry(db,id);
+ if(entry.latest_revision!==expected)
+  throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+}
+
 type HeroArgs=Record<string,unknown>;
 async function newHeroRevision(db:DB,input:HeroArgs,action:string,mediaResult?:Record<string,unknown>){
  const id=entryId(input.entry_id),req=requestId(input.request_id);
@@ -326,9 +336,7 @@ export async function importMediaFromUrl(db:DB,args:unknown){
   if(existing.operation!=="import_media_from_url")throw new DiaryError("request_conflict","Request ID used for another operation",409);
   return JSON.parse(existing.response_json);
  }
- const expected=revisionNumber(input.expected_revision);
- const entry=await requireEntry(db,id);
- if(entry.latest_revision!==expected)throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+ await requireCurrentMediaRevision(db,id,input.expected_revision);
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline");
  if(typeof input.source_url!=="string")throw new DiaryError("invalid_image_url","Source URL required");
@@ -364,9 +372,7 @@ export async function uploadMedia(db:DB,args:unknown){
   if(priorResponse.operation!=="upload_media")throw new DiaryError("request_conflict","Request ID used for another operation",409);
   return JSON.parse(priorResponse.response_json);
  }
- const expected=revisionNumber(input.expected_revision);
- const entry=await requireEntry(db,id);
- if(entry.latest_revision!==expected)throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+ await requireCurrentMediaRevision(db,id,input.expected_revision);
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline",400);
  if(input.alt_text!==undefined && (typeof input.alt_text!=="string"||input.alt_text.length>200))
@@ -408,9 +414,7 @@ export async function uploadChatGPTImage(db:DB,args:unknown){
    throw new DiaryError("request_conflict","Request ID used for another operation",409);
   return JSON.parse(existing.response_json);
  }
- const expected=revisionNumber(input.expected_revision);
- const entry=await requireEntry(db,id);
- if(entry.latest_revision!==expected)throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
+ await requireCurrentMediaRevision(db,id,input.expected_revision);
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline");
  if(input.alt_text!==undefined && (typeof input.alt_text!=="string"||input.alt_text.length>200))
