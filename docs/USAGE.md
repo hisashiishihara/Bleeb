@@ -1,83 +1,30 @@
-# aiDiary の使い方
+# Using Bleeb
 
-aiDiary は **ChatGPT と会話しながら記事を書く**ブログです。文章は Markdown として D1 に保存され、画像・動画は R2 で管理します。会話履歴そのものを自動公開する仕組みではありません。
-
-最初に [導入ガイド](GETTING_STARTED.md) に沿って、自分の Site を構築し、Site-hosted MCP プラグインを Install / Connect してください。以下の例は接続・所有者認証が完了した状態を前提とします。
-
-## 1. ChatGPT から書く
-
-プラグインを使うよう ChatGPT に指定して、例えば次のように話しかけます。
+Connect your Bleeb **Site-hosted MCP plugin** to ChatGPT, then write naturally:
 
 ```text
-aiDiary を使って、今の話題を「Linux の新しい技術」という題名で
-下書き保存して。まだ公開しないで。
+Save our discussion as a draft titled "My First Post". Do not publish.
+Revise that draft and keep its earlier revision.
+Attach this image as the hero image.
+Publish the article publicly after showing me the final text.
+Unpublish that article.
 ```
 
-```text
-今の下書きの事実関係と文章を見直して。修正版を aiDiary に保存して。
-```
+**Publication is explicit for new drafts.** Once an article is published, later edits to its latest revision become visible immediately to its existing audience. Use a separate draft for unpublished experiments.
 
-```text
-最新の本文を確認してから、その記事を owner 限定で公開して。
-```
+## Browser editor
 
-```text
-この記事を public に公開して。公開する記事と公開範囲を確認して。
-```
+- `/owner/new` — new draft.
+- `/owner/archive` — private archive and revision history.
+- `/owner/archive/{id}/edit` — edit, preview, publish, withdraw.
+- `/owner/media?entry_id={id}` — manage article media.
 
-```text
-この記事の公開を取り消して、下書きに戻して。
-```
+Owner authentication is required for all editor operations.
 
-- **下書き保存**だけでは公開されません。新規記事の公開は明示的に依頼します。
-- `owner` は所有者だけが読める公開記事です。`public` は Site 側の共有範囲の中で一般閲覧できる記事です。
-- **注意:** 公開済みの記事を保存・画像変更すると、現在の読者に最新内容が反映されます。公開済み記事に秘密の下書きを上書きしないでください。
-- MCP はリビジョン番号による更新チェックを行い、古い内容を誤って上書きすることを防ぎます。
+## Media and exports
 
-## 2. ブラウザで書く
+Images and short videos are stored in private R2. Uploading media does not make it public; only media referenced by an accessible article revision can be read publicly. Use ChatGPT file upload or the browser editor, subject to current type and size limits.
 
-ChatGPT を使わない場合、所有者用 Web エディタからも操作できます。
+Use `export_entries` for portable article data, or the owner editor's note-compatible text export. **A complete cross-Site restore is not yet verified.**
 
-- `/owner/new`: 新しい下書きを作成。
-- `/owner/archive`: 自分の記事・下書き・過去リビジョンを確認。
-- `/owner/archive/{記事ID}/edit`: 本文やタイトルを編集、プレビュー、保存・公開。
-- `/owner/media?entry_id={記事ID}`: 対象記事のメディアを管理。
-
-上記の編集画面は本人認証が必要です。読者が使う通常のブログ画面は `/`、`/archive`、`/tags`、`/posts/{slug}` です。
-
-## 3. 画像やアイキャッチを付ける
-
-ChatGPT で画像を生成したあと、「この画像を記事のアイキャッチに設定して」と依頼できます。プラグインの `upload_chatgpt_image` は ChatGPT の画像ファイル転送に対応し、保存先は Site の非公開 R2 です。外部の HTTPS 画像は許可ホストを設定した場合に限り `import_media_from_url` で取り込めます。
-
-ブラウザエディタではローカル画像（JPEG / PNG / GIF / WebP、最大10 MiB）と短い動画（MP4 / WebM、最大24 MiB）をアップロードできます。容量上限と使える形式は今後変更されることがあります。ファイルをアップロードしただけでは記事の一般公開にはなりません。公開済み記事の画像変更は現在の読者に表示され得るので、設定前に内容を確認してください。
-
-## 4. 検索、保管、バックアップ
-
-- 読者向け: 記事一覧、日付別アーカイブ、タグ、記事全文を対象としたシンプルな検索。
-- 所有者向け: 下書き・履歴・過去リビジョン、Markdown を含むエクスポート、note 向けテキストの書き出し。
-- `export_entries` は記事とメタデータを保存用に書き出します。データ移行や復元時は別途検証が必要です。
-- 既存の記事本文を公開しても、ChatGPT との会話全体が記事になるわけではありません。
-
-## 5. よくある質問
-
-**Q. 自分の VPS / NUC / サーバーは必要？**
-
-A. いいえ。現行実装は ChatGPT Sites がホストし、DB は D1、メディアは R2 です。ただし Sites の利用権限・初期構築は必要です。
-
-**Q. ChatGPT さえあれば自動で使える？**
-
-A. いいえ。各自の Site の構築、MCP プラグイン接続、本人認証設定が必要です。現時点でクリック一つで完成するテンプレートではありません。
-
-**Q. 普通の人も記事を読める？**
-
-A. Site を一般公開し、対象記事を `public` にすれば通常のブラウザで読めます。読者に ChatGPT アカウントは不要です（公開アクセスが許可された Site の場合）。
-
-**Q. ソースコードと記事のライセンスは同じ？**
-
-A. [LICENSE](../LICENSE) の BSD-3-Clause はプロジェクトのソースコードのライセンスです。**利用者自身の記事や画像を自動的に BSD ライセンスにするものではありません。** 依存ライブラリや第三者の画像は各権利・規約が別途適用されます。
-
-**Q. このコードを改造・商用利用できる？**
-
-A. プロジェクトのコードは Modified BSD（BSD-3-Clause）です。著作権表示、ライセンス文と免責条項の保持など、[ライセンス全文](../LICENSE) の条件に従って改変・再配布・商用利用できます。ChatGPT Sites など外部サービスの利用には、それぞれの利用規約が別途適用されます。
-
-開発資料: [要件](REQUIREMENTS.md) / [システム構成](DESIGN.md) / [本人認証](SITES_AUTH_VALIDATION.md)
+[Installation](GETTING_STARTED.md) · [Architecture](DESIGN.md) · [Media details](EDITOR_MEDIA.md)
