@@ -65,6 +65,15 @@ async function mutate<T>(db: DB, id: string, operation: string, response: T, wri
   return response;
 }
 
+/** Replay a completed article mutation, rejecting reuse by another operation. */
+async function completedArticleMutation(db:DB,id:string,operation:string):Promise<unknown|null>{
+ const existing=await prior(db,id);
+ if(!existing)return null;
+ if(existing.operation!==operation)
+  throw new DiaryError("request_conflict","request ID collision",409);
+ return JSON.parse(existing.response_json);
+}
+
 async function requireEntry(db: DB, id: string): Promise<Entry> {
   const row = await db.prepare("SELECT * FROM entries WHERE id=?").bind(id).first<Entry>();
   if (!row) throw new DiaryError("not_found", "Entry not found", 404);
@@ -74,11 +83,8 @@ async function requireEntry(db: DB, id: string): Promise<Entry> {
 export async function saveDraft(db: DB, args: unknown) {
   const a = args as Record<string,unknown>;
   const req = requestId(a.request_id);
-  const existing = await prior(db, req);
-  if (existing) {
-    if (existing.operation !== "save_draft") throw new DiaryError("request_conflict", "request ID collision", 409);
-    return JSON.parse(existing.response_json);
-  }
+  const replay = await completedArticleMutation(db,req,"save_draft");
+  if(replay)return replay;
   const draft = validateDraft(a);
   const id = crypto.randomUUID();
   const slug = slugFor(draft.title, id);
@@ -119,11 +125,8 @@ export async function updateEntry(db: DB, args: unknown) {
   const id = entryId(a.entry_id);
   const req = requestId(a.request_id);
   const expected = revisionNumber(a.expected_revision);
-  const previous = await prior(db, req);
-  if (previous) {
-    if (previous.operation !== "update_entry") throw new DiaryError("request_conflict", "request ID collision", 409);
-    return JSON.parse(previous.response_json);
-  }
+  const replay = await completedArticleMutation(db,req,"update_entry");
+  if(replay)return replay;
   const draft = validateDraft(a);
   const entry = await requireEntry(db, id);
   if (entry.latest_revision !== expected) {
@@ -145,11 +148,8 @@ export async function publishEntry(db: DB, args: unknown) {
   const id = entryId(a.entry_id);
   const req = requestId(a.request_id);
   const rev = revisionNumber(a.revision);
-  const previous = await prior(db, req);
-  if (previous) {
-    if (previous.operation !== "publish_entry") throw new DiaryError("request_conflict", "request ID collision", 409);
-    return JSON.parse(previous.response_json);
-  }
+  const replay = await completedArticleMutation(db,req,"publish_entry");
+  if(replay)return replay;
   const entry = await requireEntry(db, id);
   // The reader view always resolves the newest revision. A publish operation
   // that selects an old revision would appear to succeed but display another.
@@ -176,11 +176,8 @@ export async function deleteDraft(db: DB, args: unknown) {
   const id = entryId(input.entry_id);
   const expected = revisionNumber(input.expected_revision);
   const req = requestId(input.request_id);
-  const previous = await prior(db,req);
-  if(previous) {
-    if(previous.operation!=="delete_draft") throw new DiaryError("request_conflict","Request ID collision",409);
-    return JSON.parse(previous.response_json);
-  }
+  const replay = await completedArticleMutation(db,req,"delete_draft");
+  if(replay)return replay;
   const entry = await requireEntry(db,id);
   if(entry.status!=="draft" || entry.published_revision!==null || entry.visibility!=="owner")
     throw new DiaryError("not_a_draft","Only private drafts can be deleted",409);
@@ -240,11 +237,8 @@ export async function unpublishEntry(db: DB, args: unknown) {
   const a = args as Record<string,unknown>;
   const id = entryId(a.entry_id);
   const req = requestId(a.request_id);
-  const previous = await prior(db, req);
-  if (previous) {
-    if (previous.operation !== "unpublish_entry") throw new DiaryError("request_conflict", "request ID collision", 409);
-    return JSON.parse(previous.response_json);
-  }
+  const replay = await completedArticleMutation(db,req,"unpublish_entry");
+  if(replay)return replay;
   await requireEntry(db, id);
   const response = { entry_id: id, status: "draft", visibility: "owner", published_revision: null };
   return mutate(db, req, "unpublish_entry", response, [
