@@ -39,3 +39,10 @@ export function TweetEmbed({id}:{id:string}){
  const link="https://x.com/i/status/"+id;
  return <figure className="article-external-embed"><figcaption>X の投稿</figcaption>{loaded?<iframe src={"https://platform.twitter.com/embed/Tweet.html?id="+id} title="X の投稿" loading="lazy" referrerPolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-popups"/>:<button type="button" onClick={()=>setLoaded(true)}>X の投稿を読み込む</button>}<p><a href={link} target="_blank" rel="noopener noreferrer">X で投稿を開く ↗</a></p></figure>;
 }
+
+export function YouTubeEmbed({id}:{id:string}){
+ const [loaded,setLoaded]=useState(false);
+ if(!/^[a-zA-Z0-9_-]{11}$/.test(id))return <p>YouTube の動画 ID が正しくありません。</p>;
+ const link="https://www.youtube.com/watch?v="+id;
+ return <figure className="article-external-embed"><figcaption>YouTube 動画</figcaption>{loaded?<iframe src={"https://www.youtube-nocookie.com/embed/"+id} title="YouTube 動画" loading="lazy" referrerPolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/>:<button type="button" onClick={()=>setLoaded(true)}>YouTube 動画を読み込む</button>}<p><a href={link} target="_blank" rel="noopener noreferrer">YouTube で見る ↗</a></p></figure>;
+}
