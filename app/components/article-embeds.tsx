@@ -28,10 +28,9 @@ export function ArticleChart({source}:{source:string}){
 }
 const STOCK=/^[A-Z0-9.\-]{1,20}:[A-Z0-9.\-]{1,24}$/;
 export function StockEmbed({symbol}:{symbol:string}){
- const [loaded,setLoaded]=useState(false);
  if(!STOCK.test(symbol))return <p>株価の銘柄コードが正しくありません。</p>;
  const url="https://s.tradingview.com/widgetembed/?symbol="+encodeURIComponent(symbol)+"&interval=D&theme=light&style=1";
- return <figure className="article-external-embed"><figcaption>株価チャート：{symbol}（TradingView）</figcaption>{loaded?<iframe src={url} title={symbol+" の株価チャート"} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-popups" />:<button type="button" onClick={()=>setLoaded(true)}>外部の株価チャートを読み込む</button>}<p><a href={"https://www.tradingview.com/symbols/"+encodeURIComponent(symbol.replace(":","-"))+"/"} target="_blank" rel="noopener noreferrer">TradingView で見る ↗</a></p></figure>;
+ return <figure className="article-external-embed"><figcaption>株価チャート：{symbol}（TradingView）</figcaption><iframe src={url} title={symbol+" の株価チャート"} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-popups" /><p><a href={"https://www.tradingview.com/symbols/"+encodeURIComponent(symbol.replace(":","-"))+"/"} target="_blank" rel="noopener noreferrer">TradingView で見る ↗</a></p></figure>;
 }
 export function TweetEmbed({id}:{id:string}){
  const [loaded,setLoaded]=useState(false);
