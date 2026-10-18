@@ -2,6 +2,13 @@
 
 > 対象: 現行の aiDiary（ChatGPT Sites 専用実装、2026-10-18 時点）。**自動インストーラーやワンクリック導入手順ではありません。** 初回は ChatGPT Sites での構築・認証設定・検証が必要です。このリポジトリを読み取れる GitHub 権限も必要です。
 
+## 費用とプランについて
+
+ChatGPT Sites のホスティングは、**現在 ChatGPT Plus / Pro の契約に含まれます**。既に Plus を使っている人なら、利用枠内で別途 VPS・レンタルサーバー・OpenAI API の契約をせずに aiDiary を運用する構成です。ただし **Plus 自体は有料**で、サイト作成・編集は Codex 利用枠を消費し、トラフィック・ストレージなどに上限があります。アカウントで Sites が使えるか事前に確認してください。独自ドメインなど、追加サービスは別料金になり得ます。提供条件は変わる可能性があります。
+
+- [OpenAI 公式: Creating and using ChatGPT Sites](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites)
+- **新規ユーザー向けの注意:** 以下は実装に基づく導入手順です。独立した第三者によるクリーン環境での導入成功は、現時点で未検証です。既存 Site の本番 DB にマイグレーションを再実行しないでください。
+
 ## 1. 何が必要？
 
 - ChatGPT Sites が利用できる ChatGPT アカウント（対象プラン・権限は [公式ガイド](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites) を参照）。
