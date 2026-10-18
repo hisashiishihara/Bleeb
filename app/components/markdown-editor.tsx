@@ -21,6 +21,10 @@ async function postJson(action:string,payload:Record<string,unknown>):Promise<Js
  return result;
 }
 
+function messageForError(error:unknown,fallback:string):string{
+ return error instanceof Error?error.message:fallback;
+}
+
 export function MarkdownEditor({initial}:{initial:Initial}){
  const [title,setTitle]=useState(initial.title);
  const [summary,setSummary]=useState(initial.summary);
@@ -83,7 +87,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
     }
     setRevision(Number(result.revision));
     setMessage(status==="published"?"リビジョン "+result.revision+" を保存しました。公開中の記事にも反映されています。":"リビジョン "+result.revision+" を下書きに保存しました。公開はされていません。");
-  }catch(e){setError(e instanceof Error?e.message:"保存に失敗しました。");}
+  }catch(e){setError(messageForError(e,"保存に失敗しました。"));}
   finally{setBusy(false);}
  }
  async function publish(){
@@ -95,7 +99,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
       visibility,request_id:crypto.randomUUID()});
    setStatus("published");setActiveVisibility(visibility);
    setMessage(visibility==="public"?"選択したリビジョンを一般公開しました。":"オーナー限定で公開しました。");
-  }catch(e){setError(e instanceof Error?e.message:"公開に失敗しました。");}
+  }catch(e){setError(messageForError(e,"公開に失敗しました。"));}
   finally{setBusy(false);}
  }
  async function unpublish(){
@@ -106,7 +110,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    await postJson("unpublish_entry",{entry_id:initial.id,request_id:crypto.randomUUID()});
    setStatus("draft");setVisibility("owner");setActiveVisibility("owner");
    setMessage("非公開の下書きに戻しました。リビジョン履歴は残ります。");
-  }catch(e){setError(e instanceof Error?e.message:"非公開化に失敗しました。");}
+  }catch(e){setError(messageForError(e,"非公開化に失敗しました。"));}
   finally{setBusy(false);}
  }
  async function changeHero(nextId:string|null){
@@ -121,7 +125,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    setHeroId(nextId);setManualMediaId("");
    if(!nextId)setHeroAlt("");
    setMessage(status==="published"?"アイキャッチを保存しました。公開中の記事にも反映されています。":"アイキャッチを保存しました。記事は引き続き非公開です。");
-  }catch(e){setError(e instanceof Error?e.message:"アイキャッチの変更に失敗しました。");}
+  }catch(e){setError(messageForError(e,"アイキャッチの変更に失敗しました。"));}
   finally{setBusy(false);}
  }
  async function importUrl(){
@@ -136,7 +140,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    setHeroId(String(result.media_id));
    setImageUrl("");
    setMessage(status==="published"?"画像を取り込み、公開中の記事にもアイキャッチを反映しました。":"画像を取り込みました。記事は引き続き非公開です。");
-  }catch(e){setError(e instanceof Error?e.message:"URLから画像を取り込めませんでした。");}
+  }catch(e){setError(messageForError(e,"URLから画像を取り込めませんでした。"));}
   finally{setBusy(false);}
  }
  async function upload(file:File|undefined){
@@ -155,7 +159,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    setBody(previous=>previous+(previous.endsWith("\n")?"":"\n")+"\n"+String(result.markdown)+"\n");
    setDirty(true);
    setMessage("メディアを追加しました。記事本文を保存するまでは公開されません。");
-  }catch(e){setError(e instanceof Error?e.message:"アップロードに失敗しました。");}
+  }catch(e){setError(messageForError(e,"アップロードに失敗しました。"));}
   finally{setUploading(false);}
  }
  return <section className="owner editor-screen">
