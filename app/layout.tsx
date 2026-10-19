@@ -27,8 +27,7 @@ export default async function RootLayout({children}:{children:ReactNode}) {
         <main>{children}</main>
         <footer className="footer">
           <div className="footer-meta">
-            <span>観測と思考 <span className="engine-credit">／ Powered by aiDiary</span></span>
-            <span>記事は明示的な公開操作によってのみ掲載されます。</span>
+            <span>(C)2026 観測と思考{"  "}<span className="engine-credit">Powered by <a href="https://github.com/hisashiishihara/Bleeb" target="_blank" rel="noopener noreferrer">Bleeb</a></span></span>
           </div>
           <nav className="footer-links" aria-label="フッターメニュー">
             <a href="/about">このサイトについて</a>
