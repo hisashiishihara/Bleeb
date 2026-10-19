@@ -149,9 +149,9 @@ On a **public article page**, click **「B! はてブに追加」** to open the 
 
 ## Share an article to note
 
-In the owner's saved-article editor, click **「note に転載（コピーして開く）」**. Bleeb copies a note-friendly version of the latest saved revision as rich text and opens note's new-post editor in another tab. **Paste the article, set the title, check the formatting and publish manually.** Bleeb never submits or publishes to note automatically.
+In the owner's saved-article editor, click **「本文をコピー（書式付き）」**, then use **「note の新規投稿を開く」** to open note in another tab. These are separate operations: the link still works even if the browser blocks rich-text clipboard access. **Paste the article, set the title, check the formatting and publish manually.** If clipboard copying fails, the editor offers a manual Markdown copy fallback. Save any unsaved changes first. Images and videos are represented by placeholders and must be uploaded separately on note; complex Mermaid, chart and stock embeds may need manual adaptation.
 
-The button requires clipboard access and permission to open a new tab. Save any unsaved changes first. Images and videos are represented by placeholders and must be uploaded separately on note; complex Mermaid, chart and stock embeds may need manual adaptation. The existing MT-format download remains available.
+Alternatively, download a **Movable Type (MT) format .txt** file and upload it through note's **自分の記事 → インポート → MT 形式** flow (see [note's official import guide](https://www.help-note.com/hc/ja/articles/16143762469017)). The HTML tags inside MT-format text are intentional and are **not** meant to be pasted into note's normal editor. Note imports create drafts, not published articles. Bleeb never submits or publishes to note automatically.
 
 ## Browser editor
 

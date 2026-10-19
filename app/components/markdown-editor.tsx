@@ -44,6 +44,8 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [preview,setPreview]=useState(false);
  const [message,setMessage]=useState("");
  const [noteCopy,setNoteCopy]=useState<{html:string;text:string;title:string}|null>(null);
+ const [noteCopyError,setNoteCopyError]=useState("");
+ const [manualNoteCopy,setManualNoteCopy]=useState(false);
  const [error,setError]=useState("");
  const navigating=useRef(false);
  const mediaInput=useRef<HTMLInputElement>(null);
@@ -56,6 +58,8 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  },[dirty]);
  useEffect(()=>{
   setNoteCopy(null);
+  setNoteCopyError("");
+  setManualNoteCopy(false);
   if(!initial.id||!revision||dirty)return;
   const controller=new AbortController();
   void fetch("/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=full&format=clipboard&revision="+revision,{
@@ -63,24 +67,24 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   }).then(async response=>{
    if(!response.ok)throw new Error("note export unavailable");
    return response.json() as Promise<{html:string;text:string;title:string}>;
-  }).then(data=>{if(!controller.signal.aborted)setNoteCopy(data);}).catch(()=>{});
+  }).then(data=>{if(!controller.signal.aborted)setNoteCopy(data);})
+   .catch(()=>{if(!controller.signal.aborted)setNoteCopyError("note 用データの読み込みに失敗しました。ページを再読み込みしてください。");});
   return ()=>controller.abort();
  },[initial.id,revision,dirty]);
  async function copyToNote(){
   if(!noteCopy||dirty||busy||uploading)return;
-  setError("");setMessage("");
-  const tab=window.open("about:blank","_blank");
+  setError("");setMessage("");setManualNoteCopy(false);
   try{
-   if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("このブラウザでは書式付きコピーを利用できません。");
+   if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")
+    throw new Error("このブラウザでは書式付きコピーを利用できません。");
    await navigator.clipboard.write([new ClipboardItem({
     "text/html":new Blob([noteCopy.html],{type:"text/html"}),
     "text/plain":new Blob([noteCopy.text],{type:"text/plain"})
    })]);
-   if(tab){tab.location.href="https://note.com/notes/new";setMessage("本文をコピーしました。noteの本文欄に貼り付け、タイトルを「"+noteCopy.title+"」にしてから確認・公開してください。");}
-   else setMessage("本文をコピーしました。ポップアップがブロックされたため、note.com/notes/new を開いて貼り付けてください。");
-  }catch(e){
-   tab?.close();
-   setError(messageForError(e,"コピーに失敗しました。ブラウザのクリップボード権限を確認してください。"));
+   setMessage("本文をコピーしました。「note の新規投稿を開く」から本文欄に貼り付け、タイトルを「"+noteCopy.title+"」に設定してください。");
+  }catch{
+   setManualNoteCopy(true);
+   setError("書式付きコピーが利用できません。下の本文を手動でコピーして note に貼り付けてください（装飾は確認・再設定が必要です）。");
   }
  }
  const tags=()=>tagsText.split(",").map(s=>s.trim()).filter(Boolean);
@@ -270,10 +274,26 @@ export function MarkdownEditor({initial}:{initial:Initial}){
       {dirty&&<p className="editor-hint">先に本文の変更を保存してください。</p>}
    </section>}
    {initial.id&&revision&&<section className="editor-publication">
-      <h2>note用に書き出す</h2>
-      <p>「note に転載」で書式付き本文をコピーし、note の新規投稿画面を開きます。貼り付け・画像の追加・タイトル設定・公開は手動です。</p>
-      <div className="editor-actions"><button type="button" className="editor-primary" disabled={!noteCopy||dirty||busy||uploading} onClick={()=>void copyToNote()}>{noteCopy?"note に転載（コピーして開く）":"note 用データを準備中…"}</button></div>
-      <p>保存済みの最新版 r{revision} をnoteのMT形式（.txt）に変換します。noteへ自動投稿・公開はしません。</p>
+      <h2>note に転載する</h2>
+      <p>保存済みの本文をコピーして note の新規投稿画面に貼り付けます。コピーとページの移動は独立しているため、ブラウザのクリップボード権限に左右されず note を開けます。</p>
+      <div className="editor-actions">
+        <button type="button" className="editor-primary" disabled={!noteCopy||dirty||busy||uploading} onClick={()=>void copyToNote()}>
+          {noteCopy?"本文をコピー（書式付き）":"note 用データを準備中…"}
+        </button>
+        <a className="editor-edit-link" href="https://note.com/new" target="_blank" rel="noopener noreferrer">
+          note の新規投稿を開く ↗
+        </a>
+      </div>
+      {noteCopyError&&<p className="editor-error" role="alert">{noteCopyError}</p>}
+      {manualNoteCopy&&noteCopy&&
+        <label className="editor-hint">手動コピー用の本文（Markdown。選択してコピーしてください）
+          <textarea readOnly value={noteCopy.text} rows={8} onFocus={e=>e.currentTarget.select()}/>
+        </label>}
+      <p>貼り付け後のタイトル設定、画像の追加、書式の確認、公開は note 側で手動で行ってください。自動投稿は行いません。</p>
+      <h3>note のインポート機能を使う（MT 形式）</h3>
+      <p>下の .txt は、note の「自分の記事 → インポート → MT 形式」にアップロードする専用ファイルです。本文に HTML タグが含まれるのは MT 形式の仕様であり、投稿画面に直接貼り付けるものではありません。インポートされた記事は下書きになります。</p>
+      <p><a href="https://www.help-note.com/hc/ja/articles/16143762469017" target="_blank" rel="noopener noreferrer">note 公式のインポート手順 ↗</a></p>
+      <p>保存済みの最新版 r{revision} を書き出します。note への自動投稿・公開はしません。</p>
       {dirty?<p className="editor-hint">未保存の変更があります。先に保存してから書き出してください。</p>:
         <div className="editor-actions">
           <a className="editor-edit-link"

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {noteExport,markdownToNoteHtml} from "../lib/note-export.ts";
 
 const entry={id:"11111111-2222-3333-4444-555555555555",slug:"sample-story",
@@ -86,4 +87,15 @@ test("MT headers do not allow newline field injection",()=>{
 
 test("note mode is explicitly restricted",()=>{
  assert.throws(()=>noteExport(entry,revision,"unknown",origin),/Invalid note export mode/);
+});
+
+test("note editor opens note independently from clipboard and documents MT imports",()=>{
+ const editor=readFileSync(new URL("../app/components/markdown-editor.tsx",import.meta.url),"utf8");
+ assert.match(editor,/href="https:\/\/note\.com\/new" target="_blank" rel="noopener noreferrer"/);
+ assert.match(editor,/本文をコピー（書式付き）/);
+ assert.match(editor,/onClick=\{\(\)=>void copyToNote\(\)\}/);
+ assert.match(editor,/manualNoteCopy&&noteCopy/);
+ assert.doesNotMatch(editor,/window\.open\(/);
+ assert.doesNotMatch(editor,/tab\?\.close\(/);
+ assert.match(editor,/自分の記事 → インポート → MT 形式/);
 });
