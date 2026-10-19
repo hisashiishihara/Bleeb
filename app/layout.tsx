@@ -33,6 +33,7 @@ export default async function RootLayout({children}:{children:ReactNode}) {
           <nav className="footer-links" aria-label="フッターメニュー">
             <a href="/about">このサイトについて</a>
             <a href="/privacy">プライバシーポリシー</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSc81ok44WQWOAKxovF6IJB1IN4ErCRIYuruOvcl3wCILOa_Eg/viewform" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
           </nav>
         </footer>
       </div>
