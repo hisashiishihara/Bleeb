@@ -60,7 +60,7 @@
 }
 
 .article-share{margin:24px 0}
-.hatena-bookmark{font:inherit;font-size:13px;font-weight:600;color:#365a61;background:#fff;border:1px solid #365a61;border-radius:5px;padding:10px 15px;cursor:pointer}
+.hatena-bookmark{display:inline-flex;align-items:center;text-decoration:none;font:inherit;font-size:13px;font-weight:600;color:#365a61;background:#fff;border:1px solid #365a61;border-radius:5px;padding:10px 15px;cursor:pointer}
 .hatena-bookmark:hover,.hatena-bookmark:focus-visible{background:#365a61;color:#fff}
 
 /* About and privacy policy: readable public pages, consistent with the journal. */

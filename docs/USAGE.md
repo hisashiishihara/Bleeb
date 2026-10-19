@@ -147,6 +147,10 @@ See [Article embeds](ARTICLE_EMBEDS.md) for format limits and rendering details.
 
 On a **public article page**, click **「B! はてブに追加」** to open the Hatena Bookmark add screen in a new tab. Sign in with your Hatena account there, optionally add tags or a comment, and confirm the bookmark. **You do not need a Hatena Blog** and Bleeb does not post automatically. The button is hidden on owner-only articles; it uses no third-party tracking script.
 
+## Bookmark a public article on Hatena
+
+In the owner editor, a published article with **public** visibility has **「B! この公開記事をはてブに登録」**. This opens Hatena Bookmark's add screen in a new tab. Log in and confirm the bookmark there; Bleeb never bookmarks automatically. Owner-only articles and drafts do not display an add link. Readers can also use the B! link on public article pages. Links work without popup scripting.
+
 ## Share an article to note
 
 In the owner's saved-article editor, click **「本文をコピー（書式付き）」**, then use **「note の新規投稿を開く」** to open note in another tab. These are separate operations: the link still works even if the browser blocks rich-text clipboard access. **Paste the article, set the title, check the formatting and publish manually.** If clipboard copying fails, the editor offers a manual Markdown copy fallback. Save any unsaved changes first. Images and videos are represented by placeholders and must be uploaded separately on note; complex Mermaid, chart and stock embeds may need manual adaptation.

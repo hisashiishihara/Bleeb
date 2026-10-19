@@ -2,9 +2,10 @@
 import {useEffect,useRef,useState} from "react";
 import {MediaMarkdown} from "./media-markdown";
 import {mediaMaxBytes,validMediaType} from "../../lib/media-rules";
+import {hatenaBookmarkAddUrl} from "../../lib/hatena-bookmark";
 
 type Initial={
- id?:string;
+ id?:string;slug?:string;
  title:string;summary:string;body_md:string;tags:string[];
  revision?:number;published_revision?:number|null;
  hero_media_id?:string|null;hero_alt_text?:string|null;
@@ -46,9 +47,16 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [noteCopy,setNoteCopy]=useState<{html:string;text:string;title:string}|null>(null);
  const [noteCopyError,setNoteCopyError]=useState("");
  const [manualNoteCopy,setManualNoteCopy]=useState(false);
+ const [hatenaHref,setHatenaHref]=useState<string|null>(null);
  const [error,setError]=useState("");
  const navigating=useRef(false);
  const mediaInput=useRef<HTMLInputElement>(null);
+
+ useEffect(()=>{
+  if(!initial.slug)return;
+  const articleUrl=new URL("/posts/"+encodeURIComponent(initial.slug),window.location.origin);
+  setHatenaHref(hatenaBookmarkAddUrl(articleUrl.toString()));
+ },[initial.slug]);
 
  useEffect(()=>{
   if(!dirty)return;
@@ -272,6 +280,15 @@ export function MarkdownEditor({initial}:{initial:Initial}){
         onClick={()=>void changeHero(null)}>アイキャッチを解除</button>
       </div>
       {dirty&&<p className="editor-hint">先に本文の変更を保存してください。</p>}
+   </section>}
+   {initial.id&&<section className="editor-publication">
+      <h2>はてなブックマーク</h2>
+      {status==="published"&&activeVisibility==="public"&&hatenaHref?
+        <div className="editor-actions">
+          <a className="editor-edit-link" href={hatenaHref} target="_blank" rel="noopener noreferrer">B! この公開記事をはてブに登録 ↗</a>
+        </div>:
+        <p className="editor-hint">はてなブックマークへ登録できるのは一般公開中の記事だけです。非公開の下書きやオーナー限定記事は登録対象にしません。</p>}
+      <p className="editor-hint">はてな側の画面でログインし、必要に応じてコメントやタグを入力して登録してください。Bleeb から自動登録はしません。</p>
    </section>}
    {initial.id&&revision&&<section className="editor-publication">
       <h2>note に転載する</h2>
