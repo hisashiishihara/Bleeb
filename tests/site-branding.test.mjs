@@ -4,13 +4,15 @@ import { readFileSync } from "node:fs";
 
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
-test("reader-facing title is 観測と思考; aiDiary is only the engine credit",()=>{
+test("reader-facing title is 観測と思考; Bleeb is the linked engine credit",()=>{
  const layout=read("app/layout.tsx");
  const home=read("app/page.tsx");
  assert.match(layout,/default:"観測と思考"/);
  assert.match(layout,/template:"%s \| 観測と思考"/);
  assert.match(layout,/aria-label="観測と思考 ホーム"/);
- assert.match(layout,/Powered by aiDiary/);
+ assert.match(layout,/\(C\)2026 観測と思考/);
+ assert.match(layout,/Powered by <a href="https:\/\/github\.com\/hisashiishihara\/Bleeb"[^>]*>Bleeb<\/a>/);
+ assert.doesNotMatch(layout,/Powered by aiDiary|記事は明示的な公開操作/);
  assert.doesNotMatch(layout,/aria-label="aiDiary ホーム"/);
  assert.match(home,/<h1>観測と思考<\/h1>/);
  assert.doesNotMatch(home,/TECHNOLOGY \/ NOTES \/ IDEAS/);
