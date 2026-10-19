@@ -26,8 +26,14 @@ export default async function RootLayout({children}:{children:ReactNode}) {
         </header>
         <main>{children}</main>
         <footer className="footer">
-          <span>観測と思考 <span className="engine-credit">／ Powered by aiDiary</span></span>
-          <span>記事は明示的な公開操作によってのみ掲載されます。</span>
+          <div className="footer-meta">
+            <span>観測と思考 <span className="engine-credit">／ Powered by aiDiary</span></span>
+            <span>記事は明示的な公開操作によってのみ掲載されます。</span>
+          </div>
+          <nav className="footer-links" aria-label="フッターメニュー">
+            <a href="/about">このサイトについて</a>
+            <a href="/privacy">プライバシーポリシー</a>
+          </nav>
         </footer>
       </div>
     </body></html>

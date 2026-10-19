@@ -62,3 +62,17 @@
 .article-share{margin:24px 0}
 .hatena-bookmark{font:inherit;font-size:13px;font-weight:600;color:#365a61;background:#fff;border:1px solid #365a61;border-radius:5px;padding:10px 15px;cursor:pointer}
 .hatena-bookmark:hover,.hatena-bookmark:focus-visible{background:#365a61;color:#fff}
+
+/* About and privacy policy: readable public pages, consistent with the journal. */
+.footer{flex-wrap:wrap;align-items:flex-start}
+.footer-meta{display:flex;flex-direction:column;gap:7px;line-height:1.8}
+.footer-links{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.footer-links a{color:#365a61;text-decoration:underline;text-underline-offset:3px}
+.static-page{max-width:780px;margin:0 auto;padding:65px 0 12px}
+.static-page h1{font-size:clamp(30px,4.5vw,46px);letter-spacing:-.03em;line-height:1.5;margin:18px 0 32px}
+.static-page h2{font-size:21px;margin:42px 0 15px;padding-bottom:10px;border-bottom:1px solid #e8eaea}
+.static-page p,.static-page li{font-size:15px;line-height:2.05;color:#333c40}
+.static-page ul{padding-left:1.5em}
+.static-page a{color:#365a61;text-decoration:underline;text-underline-offset:3px}
+.static-page .policy-updated{font-size:13px;color:#737b7e;margin-top:45px}
+@media(max-width:650px){.static-page{padding-top:43px}.static-page h2{font-size:19px}.footer-links{gap:8px 18px}}
