@@ -20,11 +20,11 @@ test("Hatena add URLs reject non-web protocols and credential-bearing URLs",()=>
 test("owner editor links only publicly visible published articles",()=>{
  const editor=readFileSync(new URL("../app/components/markdown-editor.tsx",import.meta.url),"utf8");
  const editPage=readFileSync(new URL("../app/owner/archive/[id]/edit/page.tsx",import.meta.url),"utf8");
- const button=readFileSync(new URL("../app/components/hatena-bookmark-button.tsx",import.meta.url),"utf8");
+ const post=readFileSync(new URL("../app/posts/[slug]/page.tsx",import.meta.url),"utf8");
  assert.match(editPage,/slug:entry\.slug/);
  assert.match(editor,/status==="published"&&activeVisibility==="public"&&hatenaHref/);
  assert.match(editor,/href=\{hatenaHref\} target="_blank" rel="noopener noreferrer"/);
  assert.match(editor,/encodeURIComponent\(initial\.slug\)/);
- assert.match(button,/href=\{href\} target="_blank" rel="noopener noreferrer"/);
- assert.doesNotMatch(button,/window\.open\(/);
+ assert.doesNotMatch(post,/HatenaBookmarkButton|article-share|はてブに追加/);
+ assert.match(post,/item\.visibility==="public" && <ReferrerPing slug=\{slug\} \/>/);
 });

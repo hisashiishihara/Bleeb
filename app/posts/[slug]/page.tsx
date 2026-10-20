@@ -1,6 +1,5 @@
 import { MediaMarkdown } from "../../components/media-markdown";
 import { ReferrerPing } from "../../components/referrer-ping";
-import { HatenaBookmarkButton } from "../../components/hatena-bookmark-button";
 import { notFound } from "next/navigation";
 import { database, publicEntry } from "../../../lib/store";
 
@@ -34,7 +33,6 @@ export default async function Post({params}:Props) {
         <div className="article-meta"><span>公開 {jpDate(item.published_at)}</span><span>更新 {jpDate(item.updated_at)}</span></div>
       </header>
       <div className="prose"><MediaMarkdown body={item.body_md}/></div>
-      {item.visibility==="public" && <div className="article-share"><HatenaBookmarkButton /></div>}
       {tags(item.tags_json).length>0&&<nav className="reader-tags" aria-label="記事のタグ">{tags(item.tags_json).map(tag=><a key={tag} className="tag" href={"/archive?tag="+encodeURIComponent(tag)}>{tag}</a>)}</nav>}
       <a className="back-link lower" href="/archive">← 過去ログへ</a>
     </article>
