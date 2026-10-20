@@ -130,6 +130,8 @@ Upload your image or video through ChatGPT or the owner editor. Then insert the 
 
 Replace the placeholders with real media IDs (UUIDs) from your own article. A video uses the `video:` prefix inside the image alt text. **Cover images are set separately** through Bleeb's hero-image action; an upload alone does not publish the file.
 
+In a saved article's **アイキャッチ画像** section, use **画像をアップロードしてアイキャッチに設定**, or copy an image in your browser, click the image paste area and press **Ctrl+V / ⌘V**. PNG, JPEG, GIF and WebP images up to 10 MiB are supported. The paste area accepts image files from the clipboard; copying only an image URL does not upload it. Save unsaved article changes first. This action creates a new revision with the cover image and does not insert Markdown into the body or change visibility. For a published article, its cover updates immediately; a draft stays private. If uploading succeeds but setting the cover fails, the uploaded media ID remains available for retry or management.
+
 ### Other Markdown formatting
 
 ```markdown

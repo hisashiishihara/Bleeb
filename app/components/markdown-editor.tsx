@@ -51,6 +51,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
  const [error,setError]=useState("");
  const navigating=useRef(false);
  const mediaInput=useRef<HTMLInputElement>(null);
+ const heroInput=useRef<HTMLInputElement>(null);
 
  useEffect(()=>{
   if(!initial.slug)return;
@@ -185,9 +186,11 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   }catch(e){setError(messageForError(e,"URLから画像を取り込めませんでした。"));}
   finally{setBusy(false);}
  }
- async function upload(file:File|undefined){
-  if(!file||!initial.id||uploading)return;
+ async function upload(file:File|undefined,usage:"inline"|"hero"="inline"){
+  if(!file||!initial.id||uploading||busy)return;
   setError("");setMessage("");
+  if(usage==="hero"&&(!revision||dirty)){setError("先に本文の変更を保存してからアイキャッチを追加してください。");return;}
+  if(usage==="hero"&&!file.type.startsWith("image/")){setError("アイキャッチには PNG / JPEG / GIF / WebP の画像を選んでください。");return;}
   if(!validMediaType(file.type)){setError("PNG / JPEG / GIF / WebP / MP4 / WebM のみ対応しています。");return;}
   if(!file.size||file.size>mediaMaxBytes(file.type)){
     setError(file.type.startsWith("image/")?"画像は10MiB以下にしてください。":"動画は24MiB以下にしてください。");return;
@@ -198,9 +201,20 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    const response=await fetch("/api/owner/media",{method:"POST",credentials:"same-origin",body:form});
    const result=await response.json() as JsonResponse;
    if(!response.ok)throw new Error(String(result.message||"アップロードに失敗しました"));
-   setBody(previous=>previous+(previous.endsWith("\n")?"":"\n")+"\n"+String(result.markdown)+"\n");
-   setDirty(true);
-   setMessage("メディアを追加しました。記事本文を保存するまでは公開されません。");
+   if(usage==="hero"){
+    const id=String(result.id);
+    setManualMediaId(id);
+    try{
+     const saved=await postJson("set_entry_hero_media",{entry_id:initial.id,expected_revision:revision,
+      hero_media_id:id,alt_text:heroAlt,request_id:crypto.randomUUID()});
+     setRevision(Number(saved.revision));setHeroId(id);setManualMediaId("");
+     setMessage(status==="published"?"画像をアップロードし、アイキャッチを更新しました。公開中の記事にも反映されています。":"画像をアップロードし、アイキャッチに設定しました。記事は引き続き非公開です。");
+    }catch(e){throw new Error(messageForError(e,"アイキャッチを設定できませんでした。")+" 画像のアップロードは完了しています。下の画像IDから再設定するか、画像・動画の管理画面で確認してください。");}
+   }else{
+    setBody(previous=>previous+(previous.endsWith("\n")?"":"\n")+"\n"+String(result.markdown)+"\n");
+    setDirty(true);
+    setMessage("メディアを追加しました。記事本文を保存するまでは公開されません。");
+   }
   }catch(e){setError(messageForError(e,"アップロードに失敗しました。"));}
   finally{setUploading(false);}
  }
@@ -262,6 +276,24 @@ export function MarkdownEditor({initial}:{initial:Initial}){
       {heroId?<img src={"/media/"+heroId} alt={heroAlt||"アイキャッチ"} className="hero-image" loading="lazy"/>:
        <p className="editor-hint">現在のリビジョンにアイキャッチはありません。</p>}
       <label>代替テキスト<input maxLength={200} value={heroAlt} onChange={e=>setHeroAlt(e.target.value)} placeholder="画像の説明"/></label>
+      <div className="editor-actions">
+       <button type="button" className="ghost" disabled={busy||uploading||dirty||!revision}
+        onClick={()=>heroInput.current?.click()}>{uploading?"アップロード中…":"画像をアップロードしてアイキャッチに設定"}</button>
+       <input ref={heroInput} hidden type="file" accept="image/png,image/jpeg,image/gif,image/webp"
+        disabled={busy||uploading||dirty||!revision}
+        onChange={e=>{void upload(e.target.files?.[0],"hero");e.target.value="";}}/>
+      </div>
+      <div className="editor-hint" role="group" aria-label="アイキャッチ画像を貼り付け" tabIndex={0}
+       style={{border:"1px dashed #909698",padding:"16px",borderRadius:"5px"}}
+       onPaste={e=>{
+        e.preventDefault();
+        const file=Array.from(e.clipboardData.files).find(file=>file.type.startsWith("image/"));
+        if(!file){setError("画像を右クリックして「画像をコピー」してから貼り付けてください。URLだけの場合は下の画像URL欄を使ってください。");return;}
+        void upload(file,"hero");
+       }}>
+       ここをクリックして画像を貼り付け（Ctrl+V / ⌘V）。画像ファイルをアップロードし、本文に挿入せずアイキャッチに設定します。画像は10MiBまで。
+      </div>
+      {dirty&&<p className="editor-hint">アップロード・貼り付けの前に本文の変更を保存してください。</p>}
       <label>画像URL（許可済みホストからHTTPSで取得）
        <input type="url" value={imageUrl} onChange={e=>setImageUrl(e.target.value)}
         placeholder="https://example.com/generated-image.png"/>
@@ -323,4 +355,5 @@ export function MarkdownEditor({initial}:{initial:Initial}){
    </section>}
  </section>;
 }
+
 
