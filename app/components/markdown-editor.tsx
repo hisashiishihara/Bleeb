@@ -70,10 +70,10 @@ export function MarkdownEditor({initial}:{initial:Initial}){
   setManualNoteCopy(false);
   if(!initial.id||!revision||dirty)return;
   const controller=new AbortController();
-  void fetch("/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=full&format=clipboard&revision="+revision,{
+  void fetch("/owner/archive/"+encodeURIComponent(initial.id)+"/note-copy?revision="+revision,{
    credentials:"same-origin",signal:controller.signal
   }).then(async response=>{
-   if(!response.ok)throw new Error("note export unavailable");
+   if(!response.ok)throw new Error("note copy unavailable");
    return response.json() as Promise<{html:string;text:string;title:string}>;
   }).then(data=>{if(!controller.signal.aborted)setNoteCopy(data);})
    .catch(()=>{if(!controller.signal.aborted)setNoteCopyError("note 用データの読み込みに失敗しました。ページを再読み込みしてください。");});
@@ -306,26 +306,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
         <label className="editor-hint">手動コピー用の本文（Markdown。選択してコピーしてください）
           <textarea readOnly value={noteCopy.text} rows={8} onFocus={e=>e.currentTarget.select()}/>
         </label>}
-      <p>貼り付け後のタイトル設定、画像の追加、書式の確認、公開は note 側で手動で行ってください。自動投稿は行いません。</p>
-      <h3>note のインポート機能を使う（MT 形式）</h3>
-      <p>下の .txt は、note の「自分の記事 → インポート → MT 形式」にアップロードする専用ファイルです。本文に HTML タグが含まれるのは MT 形式の仕様であり、投稿画面に直接貼り付けるものではありません。インポートされた記事は下書きになります。</p>
-      <p><a href="https://www.help-note.com/hc/ja/articles/16143762469017" target="_blank" rel="noopener noreferrer">note 公式のインポート手順 ↗</a></p>
-      <p>保存済みの最新版 r{revision} を書き出します。note への自動投稿・公開はしません。</p>
-      {dirty?<p className="editor-hint">未保存の変更があります。先に保存してから書き出してください。</p>:
-        <div className="editor-actions">
-          <a className="editor-edit-link"
-            href={"/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=excerpt&revision="+revision}>
-            冒頭・要約版をダウンロード
-          </a>
-          <a className="editor-edit-link"
-            href={"/owner/archive/"+encodeURIComponent(initial.id)+"/export-note?mode=full&revision="+revision}>
-            全文版をダウンロード
-          </a>
-        </div>}
-      {status!=="published"||activeVisibility!=="public"?
-        <p className="editor-hint">この記事の最新版は一般公開されていないため、書き出すファイルに原文リンクは含めません。noteで公開する前に必ず確認してください。</p>:
-        <p className="editor-hint">一般公開されている原文へのリンクを末尾に付けます。</p>}
-      <p className="editor-hint">非公開メディアは自動転送されません。画像はnote上で別途アップロードしてください。インポート後はnoteの編集画面で表示を確認してください。</p>
+      <p className="editor-hint">画像の追加・書式の確認・公開は note 側で行ってください。自動投稿はしません。</p>
    </section>}
    {initial.id&&<section className="editor-publication">
       <h2>公開設定</h2>

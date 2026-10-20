@@ -155,8 +155,6 @@ In the owner editor, a published article with **public** visibility has **「B! 
 
 In the owner's saved-article editor, click **「本文をコピー（書式付き）」**, then use **「note の新規投稿を開く」** to open note in another tab. These are separate operations: the link still works even if the browser blocks rich-text clipboard access. **Paste the article, set the title, check the formatting and publish manually.** If clipboard copying fails, the editor offers a manual Markdown copy fallback. Save any unsaved changes first. Images and videos are represented by placeholders and must be uploaded separately on note; complex Mermaid, chart and stock embeds may need manual adaptation.
 
-Alternatively, download a **Movable Type (MT) format .txt** file and upload it through note's **自分の記事 → インポート → MT 形式** flow (see [note's official import guide](https://www.help-note.com/hc/ja/articles/16143762469017)). The HTML tags inside MT-format text are intentional and are **not** meant to be pasted into note's normal editor. Note imports create drafts, not published articles. Bleeb never submits or publishes to note automatically.
-
 ## Browser editor
 
 - `/owner/new` — create a draft.
@@ -166,7 +164,7 @@ Alternatively, download a **Movable Type (MT) format .txt** file and upload it t
 
 Owner authentication is required. Article data is stored in D1 and media in private R2. Media uploads alone do not make files public.
 
-For backups, use `export_entries` or the owner's note-compatible text export. Full cross-Site restore is not yet verified.
+For backups, use `export_entries` (the standard article export). Full cross-Site restore is not yet verified.
 
 [Installation](GETTING_STARTED.md) · [Architecture](DESIGN.md)
 
