@@ -1,0 +1,48 @@
+/** Public-only catalog for RSS/sitemaps. No viewer, cookies, or owner identity. */
+export type DiscoveryEntry={
+ slug:string; title:string; summary:string|null;
+ published_at:string; updated_at:string;
+};
+export const SITE_ORIGIN="https://blog.odorikani.net";
+export async function publicDiscoveryEntries(db:D1Database):Promise<DiscoveryEntry[]> {
+ const rows=await db.prepare(
+  "SELECT e.slug,e.published_at,e.updated_at,r.title,r.summary "+
+  "FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.latest_revision "+
+  "WHERE e.status='published' AND e.visibility='public' AND e.published_revision IS NOT NULL "+
+  "ORDER BY e.published_at DESC,e.id DESC LIMIT 5000"
+ ).all<DiscoveryEntry>();
+ return rows.results;
+}
+const xml=(text:string)=>text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,"")
+ .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+ .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+export function renderRss(entries:DiscoveryEntry[],origin=SITE_ORIGIN):string {
+ const items=entries.slice(0,50).map(item=>{
+  const url=origin+"/posts/"+encodeURIComponent(item.slug);
+  return "<item><title>"+xml(item.title)+"</title><link>"+xml(url)+"</link>"+
+   "<guid isPermaLink=\"true\">"+xml(url)+"</guid>"+
+   "<description>"+xml(item.summary||"")+"</description>"+
+   "<pubDate>"+new Date(item.published_at).toUTCString()+"</pubDate></item>";
+ }).join("");
+ const latest=entries.reduce((value,item)=>Math.max(value,Date.parse(item.updated_at)||0),0);
+ return '<?xml version="1.0" encoding="UTF-8"?>'+
+  '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'+
+  '<title>観測と思考</title><link>'+xml(origin)+'/</link>'+
+  '<description>見たこと、考えたこと、その記録。</description><language>ja</language>'+
+  '<atom:link href="'+xml(origin)+'/feed.xml" rel="self" type="application/rss+xml"/>'+
+  (latest?'<lastBuildDate>'+new Date(latest).toUTCString()+'</lastBuildDate>':"")+
+  items+"</channel></rss>";
+}
+export function renderSitemap(entries:DiscoveryEntry[],origin=SITE_ORIGIN):string {
+ const urls=["/","/about","/privacy",...entries.map(item=>"/posts/"+encodeURIComponent(item.slug))];
+ const unique=[...new Set(urls)];
+ const bySlug=new Map(entries.map(item=>["/posts/"+encodeURIComponent(item.slug),item]));
+ return '<?xml version="1.0" encoding="UTF-8"?>'+
+  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+
+  unique.map(path=>{
+   const item=bySlug.get(path);
+   return "<url><loc>"+xml(origin+path)+"</loc>"+
+    (item?"<lastmod>"+xml(new Date(item.updated_at).toISOString())+"</lastmod>":"")+
+    "</url>";
+  }).join("")+"</urlset>";
+}

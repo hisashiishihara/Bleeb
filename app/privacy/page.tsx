@@ -1,4 +1,5 @@
 export const metadata = {
+  robots: {index:true,follow:true},
   title: "プライバシーポリシー",
   description: "「観測と思考」におけるアクセス情報、外部埋め込み、広告と Cookie の取り扱い。",
 };

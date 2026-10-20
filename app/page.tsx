@@ -6,6 +6,7 @@ import { homeExcerpt } from "../lib/home-excerpt";
 
 export const dynamic="force-dynamic";
 export const revalidate=0;
+export const metadata={robots:{index:true,follow:true}};
 const jpDate=(value:string)=>new Intl.DateTimeFormat("ja-JP",{
  timeZone:"Asia/Tokyo",year:"numeric",month:"long",day:"numeric"
 }).format(new Date(value));

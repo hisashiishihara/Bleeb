@@ -169,3 +169,9 @@ Owner authentication is required. Article data is stored in D1 and media in priv
 For backups, use `export_entries` or the owner's note-compatible text export. Full cross-Site restore is not yet verified.
 
 [Installation](GETTING_STARTED.md) · [Architecture](DESIGN.md)
+
+## Public discovery and search indexing
+
+A public RSS 2.0 feed at `/feed.xml` and an XML sitemap at `/sitemap.xml` are generated from **only currently published, publicly visible articles**. No owner/session identity is consulted; drafts and owner-only articles never enter these documents. RSS is advertised by a `rel=alternate` metadata link and footer link. `/robots.txt` points crawlers at the sitemap and disallows owner/API endpoints.
+
+Only the home page, public article pages, About, and Privacy opt in to indexing. Owner-only article pages and private tools stay `noindex`; archive and tags retain `noindex` while we review their searchable query variants. A sitemap or RSS feed does not guarantee indexing or inclusion in Hatena Bookmark's popularity rankings.

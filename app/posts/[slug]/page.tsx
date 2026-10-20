@@ -15,7 +15,7 @@ export async function generateMetadata({params}:Props) {
   const {slug} = await params;
   const item = await publicEntry(database(), slug, await currentViewer());
   if (!item) return {title:"ページが見つかりません",robots:{index:false,follow:false}};
-  return {title:item.title,description:item.summary ?? item.title,openGraph:{title:item.title,description:item.summary ?? item.title,type:"article",...(item.hero_media_id?{images:[{url:"/media/"+item.hero_media_id,alt:item.hero_alt_text||item.title}]}:{})},robots:{index:false,follow:false}};
+  return {title:item.title,description:item.summary ?? item.title,openGraph:{title:item.title,description:item.summary ?? item.title,type:"article",...(item.hero_media_id?{images:[{url:"/media/"+item.hero_media_id,alt:item.hero_alt_text||item.title}]}:{})},robots:item.visibility==="public"?{index:true,follow:true}:{index:false,follow:false}};
 }
 
 export default async function Post({params}:Props) {

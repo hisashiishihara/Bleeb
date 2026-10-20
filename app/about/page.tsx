@@ -1,4 +1,5 @@
 export const metadata = {
+  robots: {index:true,follow:true},
   title: "このサイトについて",
   description: "「観測と思考」の運営方針と記事の制作について。",
 };
