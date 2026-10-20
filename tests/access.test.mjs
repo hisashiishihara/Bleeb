@@ -373,7 +373,7 @@ test("note clipboard is owner-only, read-only and revision-locked",async()=>{
   await store.updateEntry(db,{entry_id:saved.entry_id,expected_revision:2,title:"DRAFT AFTER PUBLICATION",body_md:"UNPUBLISHED SECRET",request_id:req()});
   const now=await get(3,ownerHeaders);
   assert.match((await now.json()).text,/https:\/\/test\.example\.invalid\/posts\//);
-  assert.equal(sqlite.prepare("SELECT count(*) as n FROM mutation_requests").get().n,before+2);
+  assert.equal(sqlite.prepare("SELECT count(*) as n FROM mutation_requests").get().n,before+3);
  }finally{sqlite.close();}
 });
 
