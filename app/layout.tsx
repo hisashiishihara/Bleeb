@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: { default:"観測と思考", template:"%s | 観測と思考" },
-  description:"見たこと、考えたこと、その記録。技術、社会、日々の出来事を綴る個人ブログ。",
+  description:"技術の変化を読み、企業や市場の未来を予測する個人の blog",
   robots:{ index:false, follow:false },
   alternates:{types:{"application/rss+xml":"/feed.xml"}}
 };

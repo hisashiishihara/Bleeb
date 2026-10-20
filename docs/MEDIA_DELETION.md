@@ -25,8 +25,7 @@ a file referenced by the latest reader-visible revision of a published article, 
   automatically or inferred from a vague reference.
 
 If the owner wants to remove a file in an existing published article, first
-save a new revision without the Markdown reference (it becomes reader-visible immediately on already-published articles); explicitly publish only if a publication-state or audience change is intended
-that revision. Then perform file deletion.
+save a new revision without the Markdown reference (it becomes reader-visible immediately on already-published articles). Explicitly publish again only to change publication state or audience. Then perform file deletion.
 
 The R2 operation precedes D1 deletion so errors never discard the only stored
 object key before bytes are removed. A failed delete leaves D1 metadata intact
@@ -43,8 +42,8 @@ D1 deletion in the Site before reporting completion.
 ## Deployment tests
 
 - Retain existing owner/public Sites policy, D1 rows and article history,
-  existing media upload/read behavior and the original seven MCP tools.
-- The eighth MCP tool must be explicitly registered/reconnected; updating
+  existing media upload/read behavior and the current 12 MCP tools.
+- If MCP tool definitions change, their Site-hosted registration must be refreshed; updating
   GitHub alone does not automatically update the connected plugin interface.
 - Validate 409 for media referenced by the latest reader-visible revision of a published article;
   verify same-origin and forged-header denial; verify unrelated assets untouched.

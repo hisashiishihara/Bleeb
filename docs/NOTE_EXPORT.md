@@ -1,48 +1,30 @@
-# note export (per article)
+# Copy an article to note
 
-aiDiary stays the authoritative archive. note is an optional distribution channel, not
-a mirror or source of truth. The implementation does not use unofficial note APIs
-or automate publication.
+Bleeb is the authoritative article archive. note is an optional distribution channel; publishing or editing on note never modifies Bleeb.
 
 ## Owner workflow
 
-On an authenticated aiDiary article editor, choose either:
+In the saved article editor (`/owner/archive/{id}/edit`):
 
-- **冒頭・要約版をダウンロード** — use the summary, if available, and the first
-  two body paragraphs (up to approximately 420 characters of the opening).
-- **全文版をダウンロード** — convert the complete saved Markdown to conservative HTML.
+1. Save unsaved edits; the rich-text copy action uses the current saved revision.
+2. Click **「本文をコピー（書式付き）」**.
+3. Click **「note の新規投稿を開く」** and paste into note.
+4. Add the title, review formatting and media, and publish on note yourself.
 
-Both downloads generate a UTF-8 Movable Type (MT) TXT file with a single article.
-In note: open article management, select Import / Movable Type (MT), upload the file,
-review the imported draft, and explicitly publish it if desired.
+Clipboard permission failures display a **manual Markdown copy** fallback. The note link is independent of clipboard permissions and opens in a separate tab.
 
-Official note format and import limits:
-https://www.help-note.com/hc/ja/articles/16143759138329-インポート機能の仕様
+**The former Movable Type (MT) TXT download/import feature was removed.** Neither the browser editor nor the API offers that export format. Standard `export_entries` remains available for Bleeb content backup.
 
-## Security and preservation
+## Security
 
-- Authenticated owner access is required server-side; anonymous or unauthorized
-  requests return 404. No external API calls, D1 changes or R2 changes occur.
-- The editor blocks exports while local edits are unsaved. The download also checks
-  the expected latest revision number; stale requests return 409.
-- A source link is appended **only** when the exported revision is the newest
-  saved revision of an already-published public article (status=published,
-  visibility=public). It is absent for drafts, owner-only posts or stale exports.
-  The historical published_revision pointer does not control reader content.
-- No changes to the original article, tags, history, visibility, or publication.
-- HTML is escaped and unsafe link schemes are not emitted.
-- Image references are placeholders, not remote media URLs. Private R2 assets are
-  not leaked or published. Images must be uploaded separately within note.
-  note officially recognizes imported image URLs ending in JPEG, PNG or GIF,
-  not private WebP media references.
+- `GET /owner/archive/{id}/note-copy?revision=N` is owner-only, read-only and revision-locked. Unauthorized requests return 404; stale revisions return 409.
+- Successful requests return `{title, html, text}` as JSON with private no-store headers. The browser clipboard uses both `text/html` and `text/plain`.
+- Only a currently public, published article gets its original URL appended. Drafts and owner-only articles never expose a source permalink in copy data.
+- Raw HTML is escaped; unsafe link schemes are excluded. Private media URLs become placeholders instead of transferring private R2 objects to note.
+- No note credentials, unofficial API, automatic posting, publication, synchronization or D1/R2 mutation is involved.
 
-## Limitations
+## Limits
 
-- The Markdown-to-HTML converter covers basic paragraphs, headings, lists, links,
-  emphasis, code blocks and quotes. Complex embeds and other syntax require review.
-- Note can ignore tags, formatting and some embedded content from MT, so check the
-  draft before publishing. Imported posts may retain their historical publication
-  timestamp rather than appearing as new items in the note feed.
-- Import is asynchronous. GitHub tests validate the generated MT file, but do not
-  constitute a live note import. No note connection, post ID mapping, automatic
-  synchronization, or duplicate prevention is implemented.
+The HTML subset supports paragraphs, headings, lists, links, emphasis, code and quotes. Images, videos, Mermaid, charts and other rich embeds need manual adaptation; inspect the pasted article before publishing.
+
+Implementation: `lib/note-copy.ts`, `app/owner/archive/[id]/note-copy/route.ts`, `tests/note-copy.test.mjs`.

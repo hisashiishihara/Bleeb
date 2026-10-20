@@ -1,55 +1,35 @@
-# aiDiary platform validation and release gates (2026-10-17)
+# Platform validation and operational evidence
 
-This document separates **documented platform support** from **verified end-to-end operation**.
+The original 2026-10-17 document was a **pre-deployment investigation**. Its claims that Sites, MCP, public HTTP access or publication were untested are outdated. This file records what is known now, without conflating GitHub tests with live operation.
 
-## Confirmed in current public documentation
+## Latest reported production verification
 
-- ChatGPT Sites on Plus/Pro can host web experiences and persistent D1.
-- Official `openai/sites` vinext template uses `@openai/sites-vite-plugin`, a `.openai/hosting.json` D1 binding, and a Cloudflare Vite plugin.
-- Sites can host MCP tools and create an installable plugin after the Site **owner** publishes.
-- Sites Sign in with ChatGPT forwards `oai-authenticated-user-email` to server code.
-- Hosted plugins must be installed **and connected** in the intended ChatGPT account; publish again after tools are changed.
+The owner-provided ChatGPT Work report for **v38 (2026-10-20)** describes:
 
-References:
-- https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites
-- https://help.openai.com/en/articles/20001547-hosting-a-plugin-with-chatgpt-sites
-- https://learn.chatgpt.com/docs/sites/data-and-connections
-- https://github.com/openai/sites
+- Existing Site: `https://blog.odorikani.net`.
+- Deployment `appgdep_6ad6d4ddb9148191ab96b1b068f788b9`, at commit `4c64528f8507c0612905397d706acb966a6f283c`.
+- 70 automated tests, type-check and build successful for that deployment.
+- Production RSS 2.0, sitemap and robots.txt served HTTP 200; public entries only.
+- Searchable public pages did not retain the shared `noindex` response header.
+- Anonymous 404s for private entries, owner area and clipboard API; forged owner headers rejected.
+- Article/revision/media metadata and D1/R2/MCP identity/configuration preserved, with no new migrations.
 
-## Not yet verified and therefore blocked
+This is a **reported deployment outcome**, not independent confirmation of later commits.
 
-1. This GitHub connection can update source, but **does not create or publish Sites**. Deploy from ChatGPT Work/Codex with Sites access.
-2. Site-backed D1 migrations on the account, and publication without code deployment, must be exercised on an actual Site.
-3. Site-hosted MCP tools have not been provisioned; `plugin/tool-definitions.ts` is **a contract description, not a live MCP server**.
-4. The trusted identity on a Site-hosted MCP **write** invocation has not been proven. Do not enable owner routes, connect a live plugin, or enable production authoring until a security test verifies that requests cannot spoof `oai-authenticated-user-email`.
-5. The Site is not publicly published, and anonymous-vs-owner permissions have not been proven. The acceptance suite requires **real HTTP** tests of each.
-6. Markdown export conversion is implemented; D1 restoration on an actual Site has not been tested.
+## Still separate from source and CI verification
 
-## Security guardrails
+- Actual note clipboard/paste, Hatena Bookmark clicks, mobile rendering, and external forms are **browser-level** checks.
+- Google Search Console verification and search-result inclusion are separate from removing `noindex`.
+- Full provider-independent restore of D1 **and R2** remains a separate disaster-recovery task.
+- A new user's clean Plus-account installation is not yet independently reproduced.
+- Future hosting features and plan limits must be checked against current official platform terms.
 
-- `AI_DIARY_OWNER_API_ENABLED` must be exactly `true` **and** `AI_DIARY_OWNER_EMAIL` must match verified server-injected identity; default is **deny** for all owner APIs.
-- Do **not** set `AI_DIARY_OWNER_API_ENABLED=true` until the ingress strips/overrides any spoofed identity header. Using the browser sign-in alone is not enough proof for MCP.
-- Never put a personal email, token, cookie, secrets or manuscript content in GitHub.
-- Public SQL joins **only** `published_revision`; authored revisions remain separate.
-- No seed data or actual conversation text is committed or published.
-- Keep any initial Site shared only with its owner. An internet-public Site is a separate approval gate.
-- UI is noindexed for test purposes; production SEO is a separate decision.
+## Security and deployment gates
 
-## Test checklist before enabling publication
+- Require Sites-injected verified identity and `AI_DIARY_OWNER_API_ENABLED=true` before owner mutations; never trust arbitrary request headers.
+- Re-check anonymous, forged-header and private-media denial after **each** Site deployment.
+- Reader pages show latest saved revisions only for authorized published entries; private drafts never appear in RSS, sitemap or metadata.
+- Keep current D1/R2/article data intact, with no migration or visibility changes unless explicitly requested.
+- Reviewed GitHub source must be explicitly deployed to the **existing** Site by Work or an authorized deployment workflow; pushing `main` alone is insufficient.
 
-- [ ] Create Site in Work, load this repository with the official starter, configure D1 and run migration
-- [ ] Confirm Site-hosted MCP registration has trustworthy owner identity
-- [ ] Test forged headers / unsigned requests on owner API and MCP tools
-- [ ] In ordinary ChatGPT, connected plugin saves a fake private draft
-- [ ] Anonymous visitor cannot retrieve the draft
-- [ ] Update draft, verify old revision, and explicitly publish
-- [ ] Anonymous public permalink displays published version
-- [ ] Change draft again: public permalink still uses previous published revision
-- [ ] Publish new revision without redeploying Site application
-- [ ] Unpublish: homepage and permalink both hide article
-- [ ] Export JSON + Markdown; restore to empty test D1; compare content and metadata
-- [ ] Only after all tests and user confirmation, consider broad public sharing
-
-## Important operational note
-
-A GitHub push alone never deploys this Site. Sites owner publication is a separate workflow. Site URL and plugin installation card are not known until Sites actually creates them.
+[Architecture](DESIGN.md) · [Deployment](SITES_HANDOFF.md) · [Article access](ARTICLE_ACCESS.md)

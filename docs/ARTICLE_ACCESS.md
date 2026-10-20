@@ -1,51 +1,33 @@
-# Article audiences and membership
+# Current article access and authentication
 
-For the implemented D1 schema, including the historical members table and active publication pointers, see [DATABASE.md](DATABASE.md).
+**Current behavior (October 2026):** There are **two active audiences**, `owner` and `public`. Membership registration, paid access and billing are disabled. The legacy `members` table and legacy visibility values are retained for schema compatibility, not active user features.
 
-Implemented 2026-10-17. This document supersedes the future-audience section of ACCESS_AND_REFERRERS.md. Sites remains owner-private; no public rollout or payment integration is authorized.
+| Article state | Verified owner | Anonymous or other reader |
+| --- | --- | --- |
+| Draft (any stored visibility) | Owner archive/editor only | No access |
+| Published + `owner` | Yes | No access |
+| Published + `public` | Yes | Yes |
+| Historical `registered` / `paid` value | Yes | No access |
 
-| Article audience | Owner | Active paid member | Registered member | Anonymous / unregistered |
-| --- | --- | --- | --- | --- |
-| owner | yes | no | no | no |
-| paid | yes | yes | no | no |
-| registered | yes | yes | yes | no |
-| public | yes | yes | yes | yes |
+## Publication and revisions
 
-Status and visibility are independent. All new and migrated entries default to owner. **Only entries with status=published have reader permalinks; these render latest_revision.** A saved edit or hero change to an already-published article becomes immediately visible to its existing authorized audience, without broadening visibility. Drafts remain hidden from regular reader routes, even to the owner, and their revision history is available only through owner APIs/archive. The legacy published_revision column records the last explicit publication action and is not the reader-visible content selector. Owner readers can see published owner-only articles; anonymous readers cannot.
+- New entries start as `draft`, visibility `owner`.
+- `publish_entry` accepts the **latest revision only** and visibility `owner` or `public`. Omitting visibility preserves the existing audience and never silently broadens it.
+- Reader queries require `status=published` and non-null `published_revision` as a publication marker, then read **`latest_revision`** under the audience predicate. The marker does **not** freeze a prior revision.
+- A saved edit or hero change to an already published entry becomes immediately visible to its current authorized audience, without an explicit republish. Create a separate draft before making sensitive unpublished edits.
+- `unpublish_entry` returns the entry to draft/owner, clears the publication pointer and retains all revisions.
+- The owner archive exposes saved history only to the owner; public readers never select arbitrary revisions.
 
-## Publishing
+## Identity and private routes
 
-publish_entry accepts visibility=owner|public and the **latest saved revision only**. For older text, create a newer revision based on the historical content. Broader access requires explicit owner intent. Omitted visibility retains the current audience for compatibility; it never broadens access. New request IDs are required for distinct publication operations. unpublish_entry resets status=draft, visibility=owner and published_revision=NULL without deleting history. The seven MCP tool names and existing required parameters are retained.
+Sites supplies trusted owner identity; server-side writes/owner reads require both the authenticated user identity and matching configured owner email, with `AI_DIARY_OWNER_API_ENABLED=true`. Incoming client-controlled identity claims cannot confer access. Owner REST mutations also reject cross-origin Origin headers. The currently active MCP surface has **12 owner-only tools**.
 
-## Identity and registration
+Non-owner sign-in provides **no** membership entitlement. The `/account`, `/owner/members`, `/api/membership` and member-management endpoints are disabled. D1 records are preserved.
 
-Sites Dispatch supplies verified oai-authenticated-user-id (stable within one Site) and verified email. It removes caller-supplied identity headers. The application uses the Site-scoped ID as the membership key. Owner authorization retains both the ID/email verification and the owner API enable switch.
+Reader metadata and media endpoints enforce the same audience boundary. Private responses must not be shared in caches. Public articles can be indexed, while owner-only articles and management pages remain noindex.
 
-/account offers the documented top-level /signin-with-chatgpt flow. Authentication alone does not register a reader. An explicit same-origin POST /api/membership with action=register creates a free membership for the server-injected ID. Client IDs, tiers and payment claims are rejected. Re-registration never reactivates revoked access or changes existing entitlement.
+## Historical context
 
-Migration 0002 creates members with user_id, registered_at, tier, active, paid_active, paid_until and updated_at. Paid access requires active registration, tier=paid, paid_active=1 and either no expiry or a valid future paid_until. Every reader request queries the server-side row; there are no entitlement cookies, client claims or in-memory permission caches. Paid expiry is exclusive: a member loses paid access at the expiry instant and keeps registered access while their registration remains active.
+The 2026-10-17 four-tier audience proposal (`owner`, `registered`, `paid`, `public`) was **not retained as active product behavior**. Implementing additional tiers would require new explicit authorization, entitlement and payment security work; the historical schema alone does not enable them.
 
-## Owner management
-
-/owner/members lists up to 100 existing registered members. Its same-origin POST /api/owner/members requires the existing verified owner gate. It can change registered/paid tier, active status, paid_active and expiry. It cannot create an arbitrary member ID; that ID must first arrive through verified registration. Account state and membership identifiers are owner-only. No real memberships are seeded, and no billing occurs.
-
-## Read surfaces and cache
-
-The shared audience SQL predicate runs before selecting reader list, article body, title or description. An unauthorized permalink returns generic not-found metadata and page content. There are no reader endpoints accepting an asserted user ID or audience. Owner archive, revision pages, exports and mutations continue to require owner authorization. Public referrer collection additionally requires visibility=public and stays disabled.
-
-All responses receive private/no-store and CDN no-store headers. Pages are dynamic and non-indexable. This deliberately includes public articles, so audience reductions, revocation and expiry do not leave a public cached copy. Public caching is not part of this release.
-
-## Test boundary
-
-The existing owner-private Sites policy prevents non-owner readers from reaching the Worker. Keep that policy. Synthetic memberships and the full reader matrix are tested only in isolated in-memory SQLite using the actual store/query/API functions. Synthetic identity headers there represent the trusted platform ingress; they do not prove a second account's hosted sign-in. Hosted unsigned/forged-header rejection and real owner MCP operations are tested separately. Do not claim hosted paid/free login verification until separate authorized accounts and an appropriate isolated Sites access policy exist.
-
-Before a public rollout, separately authorize the Site audience change and test real signed-in registered/paid/expired accounts, anonymous HTML/metadata, registration, management and cache behavior. No external identity or authentication protocol is guessed.
-
-## Payments
-
-Payment provider, checkout, verified webhook signature validation, subscription reconciliation, cancellations/refunds, and audit trail for billing events remain unimplemented. A future integration must update server-side entitlement records only after verified provider events. ChatGPT Plus/Pro is unrelated to aiDiary membership.
-
-
-## Current operation update (2026-10-17)
-
-Only owner/public audiences are active. Membership registration, membership management and billing are suspended. Existing schema/data are preserved. PUBLIC_ROLLOUT.md supersedes earlier active member/audience plans; changing the Sites audience to public requires explicit owner confirmation.
+See [current rollout and deployment](PUBLIC_ROLLOUT.md), [database semantics](DATABASE.md), and [security checks](SITES_AUTH_VALIDATION.md).

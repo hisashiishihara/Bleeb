@@ -11,13 +11,16 @@
   records it in media_assets, then creates a new private hero revision.
   `usage=inline` uploads and returns safe Markdown for later insertion, without
   modifying the article; both accept a unique `request_id`.
-- An existing hero is NEVER automatically published. Explicit
-  `publish_entry(revision,visibility)` is still required.
-- Public image and OpenGraph metadata select **published_revision only**.
-  Anonymous R2 reads are permitted solely for media in that revision's body or
-  `hero_media_id`, and only for a public published article.
-- Deletion refuses files used as hero or inline media in the currently
-  published revision. Historic Markdown and hero IDs remain in revisions.
+- On a **draft**, changing the hero remains private until explicitly published.
+  On an **already published** article, the new hero revision becomes reader-visible
+  immediately at the same existing audience. Only a status/audience change requires
+  an explicit `publish_entry` call.
+- Reader images and OpenGraph metadata select **latest_revision** for published
+  articles after the audience check; `published_revision` is a historical marker.
+  Anonymous R2 reads require a reference in the current latest revision of a
+  published, public article.
+- Deletion refuses media referenced in the latest reader-visible revision of any
+  published article. Historic Markdown and hero IDs remain in revisions.
 
 ## URL source security and limitations
 
@@ -51,9 +54,9 @@ URLs are anonymously retrievable.
    after inspecting real accessible URLs. Never include local/intranet hosts.
 4. Register/reconnect the added Site-hosted MCP tools.
 5. Test with a fictional article and an explicitly permitted hosted test PNG.
-6. Confirm no-leak on unpublished hero and owner-only article, and selected
-   public revision's hero only. Verify old hero remains while a new draft
-   exists; confirm published hero on 200 and retract to 404.
+6. Confirm no-leak on draft heroes and owner-only articles. For an already
+   published public article, confirm its latest saved hero appears immediately
+   without republishing, and that restrictions or unpublish retract media to 404.
 7. Reject off-allowlist/private/internal hosts, redirects outside allowlist,
    invalid MIME/signature, too-large downloads and stale expected revisions.
 8. Verify existing media deletion, browser upload and all previous MCP tools.

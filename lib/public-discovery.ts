@@ -28,7 +28,7 @@ export function renderRss(entries:DiscoveryEntry[],origin=SITE_ORIGIN):string {
  return '<?xml version="1.0" encoding="UTF-8"?>'+
   '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'+
   '<title>観測と思考</title><link>'+xml(origin)+'/</link>'+
-  '<description>見たこと、考えたこと、その記録。</description><language>ja</language>'+
+  '<description>技術の変化を読み、企業や市場の未来を予測する個人の blog</description><language>ja</language>'+
   '<atom:link href="'+xml(origin)+'/feed.xml" rel="self" type="application/rss+xml"/>'+
   (latest?'<lastBuildDate>'+new Date(latest).toUTCString()+'</lastBuildDate>':"")+
   items+"</channel></rss>";

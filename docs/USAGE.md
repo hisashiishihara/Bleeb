@@ -172,6 +172,8 @@ For backups, use `export_entries` (the standard article export). Full cross-Site
 
 ## Public discovery and search indexing
 
+The canonical production blog is [観測と思考](https://blog.odorikani.net); its homepage describes a technology-led perspective on companies and markets. Search discovery does not imply that Google has indexed an article or that Hatena Bookmark has featured it.
+
 A public RSS 2.0 feed at `/feed.xml` and an XML sitemap at `/sitemap.xml` are generated from **only currently published, publicly visible articles**. No owner/session identity is consulted; drafts and owner-only articles never enter these documents. RSS is advertised by a `rel=alternate` metadata link and footer link. `/robots.txt` points crawlers at the sitemap and disallows owner/API endpoints.
 
 Only the home page, public article pages, About, and Privacy opt in to indexing. Owner-only article pages and private tools stay `noindex`; archive and tags retain `noindex` while we review their searchable query variants. A sitemap or RSS feed does not guarantee indexing or inclusion in Hatena Bookmark's popularity rankings.

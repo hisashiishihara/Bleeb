@@ -4,7 +4,7 @@ Start with the short guides. Bleeb favors **minimal code and minimal documentati
 
 ## Start here
 
-- [Installation](GETTING_STARTED.md) — set up a private ChatGPT Site.
+- [Installation](GETTING_STARTED.md) — set up a new private ChatGPT Site, or update the existing one.
 - [Usage](USAGE.md) — publish articles from ChatGPT.
 - [Roadmap](ROADMAP.md) — proposed features, not implementation commitments.
 - [Architecture](DESIGN.md) — runtime and security boundaries.
@@ -15,7 +15,7 @@ Start with the short guides. Bleeb favors **minimal code and minimal documentati
 - [Article embeds](ARTICLE_EMBEDS.md) — diagrams, charts, tables and rich Markdown.
 - [Editor and media](EDITOR_MEDIA.md) · [Media deletion](MEDIA_DELETION.md) · [Remote images](REMOTE_HERO.md).
 - [Article access](ARTICLE_ACCESS.md) · [Site authentication](SITES_AUTH_VALIDATION.md) · [Public rollout](PUBLIC_ROLLOUT.md).
-- [Export to note](NOTE_EXPORT.md) · [Access and referrers](ACCESS_AND_REFERRERS.md).
+- [Copy to note](NOTE_EXPORT.md) · [Access and referrers](ACCESS_AND_REFERRERS.md) · [Current public operation](PUBLIC_ROLLOUT.md).
 - [Deployment](SITES_HANDOFF.md) · [Public release checklist](PUBLIC_RELEASE_CHECKLIST.md).
 
 ## Background

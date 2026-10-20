@@ -3,9 +3,8 @@
 ## Purpose
 
 The owner can edit existing aiDiary articles directly in a browser without
-ChatGPT, save revisions, and upload local images/videos. The original seven MCP tools remain compatible and use the same revision model.
-An eighth owner-only tool, `delete_media`, provides explicit irreversible
-media deletion by ChatGPT after its Site-hosted registration is refreshed.
+ChatGPT, save revisions, and upload local images/videos. The Site-hosted MCP currently exposes 12 owner-only tools, including `delete_media`,
+for explicit irreversible media deletion. The browser uses the same revision model.
 
 ## Routes
 
@@ -40,9 +39,10 @@ name and creation time. It must not reset existing D1 data or revisions.
 The R2 bucket is NOT public and has no custom public domain. All access goes
 through the dynamic, authenticated/authorized route; anonymous browsers can
 fetch a media file *only when* the media ID belongs to a public published
-article and its **selected published Markdown revision** references it.
-An older published revision cannot expose an attachment referenced only in
-a newer unpublished draft. Changing visibility, switching revisions or
+article and its **latest saved Markdown revision** references it.
+On an already published public article, a newly saved revision becomes reader-visible
+immediately; media referenced there may become public as well. To prepare media
+privately, use a separate private draft instead. Changing visibility or
 unpublishing takes effect immediately for media as well as article text.
 
 For owner-only content, the same `/media/{id}` path requires verified owner
@@ -93,10 +93,11 @@ must not delete objects reachable from any retained revision.
    and confirm the new revision exists. Old revision must be readable.
 5. Upload a fake PNG then short fake MP4/WebM; confirm owner preview works and
    range requests yield 206 and correct Content-Range.
-6. Use fake article with media in unpublished revision N+1 while public
-   revision N is selected. Anonymous requests for private N+1 media must 404.
-7. Explicitly publish N+1 with `public`; verify anonymous article and its
-   media become available, without deploying new code.
+6. Use a **private draft** with media; verify anonymous requests return 404.
+   Verify a newly saved revision to an already public article shows new media
+   immediately, without changing publication status or audience.
+7. Explicitly publish the private draft with `public`; verify anonymous article
+   and media become available, without deploying new code.
 8. Unpublish/restrict article; verify anonymous media and page return 404
    immediately. Owner must retain edit/read access.
 9. Verify forged auth headers, cross-origin upload, wrong file signature,

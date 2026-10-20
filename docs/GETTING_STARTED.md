@@ -1,33 +1,35 @@
 # Install Bleeb
 
-Bleeb runs on **ChatGPT Sites** with Site-hosted MCP, D1 (`DB`) and R2 (`MEDIA`). No separate server or OpenAI API key is required. Eligible Plus/Pro plans currently include Sites hosting within usage limits; the subscription itself is paid. See the [official Sites guide](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites).
+Bleeb runs on ChatGPT Sites with Site-hosted MCP, D1 (`DB`) and private R2 (`MEDIA`). It needs no VPS or separately billed OpenAI API key by default. Plan eligibility and hosting limits depend on current platform terms; consult the [official Sites guide](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites).
 
 ## Requirements
 
-- An account with ChatGPT Sites and Work/Codex access.
+- An account with ChatGPT Sites and access to Work/Codex deployment tools.
 - Access to this repository and permission to create a Site.
-- A trusted owner identity and Site secret configuration.
+- A trusted owner identity and Site secrets.
 
-## Setup
+## New installation
 
-1. Ask ChatGPT Work to create a **new private Site** from this repository, retaining `app/`, `lib/`, `plugin/`, `drizzle/`, and `.openai/hosting.json`.
-2. Bind D1 as `DB` and R2 as `MEDIA`. Apply the numbered migrations in `drizzle/` in order **only to the new database**. Never reset a production database.
-3. Set `AI_DIARY_OWNER_EMAIL` as a Site secret. Verify trusted platform identity; do not trust user-supplied identity headers. Enable `AI_DIARY_OWNER_API_ENABLED=true` **only after** authentication tests pass.
-4. Publish the private test Site, then **Install → Connect** its Site-hosted MCP plugin in ChatGPT. Verify the tools can read and update a test entry.
-5. Test draft → edit → publish → unpublish, image upload, revision conflicts, and unauthorized access.
+1. Ask Work to create a **new private Site** from `hisashiishihara/Bleeb`, including `app/`, `lib/`, `plugin/`, `drizzle/` and `.openai/hosting.json`.
+2. Bind D1 as `DB` and R2 as `MEDIA`. Apply numbered migrations **only to the new database**; never reset production data.
+3. Configure owner email and test Sites-injected identity. Enable `AI_DIARY_OWNER_API_ENABLED=true` only after spoofed/unsigned owner access is rejected.
+4. Confirm the new Site's public origin in metadata, RSS, sitemap and robots before indexing; the reference deployment uses `blog.odorikani.net`.
+5. Publish the private test Site; install/connect its Site-hosted MCP plugin and verify test drafts, editing, publishing, unpublishing and media access.
+6. Validate public vs owner-only read boundaries before opening a test Site to anonymous visitors.
 
-Suggested Work request:
+Example Work instruction:
 
 ```text
-Build Bleeb from hisashiishihara/ai-diary on a NEW private ChatGPT Site.
-Keep D1 DB, R2 MEDIA, Site-hosted MCP, and owner authentication.
-Use fictional test data only. Verify draft, publish, unpublish,
-media and anonymous-access denial. Do not touch existing Sites.
+Create a NEW private ChatGPT Site from hisashiishihara/Bleeb.
+Bind new D1 DB and private R2 MEDIA, set up trusted owner authentication,
+and enable Site-hosted MCP with fictional test data only.
+Check draft/publish/unpublish/media and blocked anonymous owner access.
+Do NOT touch my existing blog, Site, articles or storage.
 ```
 
-## Going public
+## Existing Site updates
 
-Article visibility (`owner` / `public`) and **Site sharing** are separate controls. Before sharing the Site, test anonymous access to public articles and rejection of drafts, private articles, owner routes, and mutation tools. No one-click installer or independent clean-account installation has yet been verified.
+For `観測と思考` (`https://blog.odorikani.net`), **deploy to the existing Site** rather than following the new-install steps. Never re-run existing migrations or change D1/R2, visibility, owner secrets or MCP connections without explicit approval. See [deployment handoff](SITES_HANDOFF.md).
 
 ## Development checks
 
@@ -38,6 +40,6 @@ npm run typecheck
 npm run build
 ```
 
-GitHub pushes do **not** deploy the Site. Content changes through MCP normally need no code redeployment.
+GitHub pushes do not deploy Sites. Article content updates through D1/MCP normally need no code redeploy.
 
 [Usage](USAGE.md) · [Security validation](SITES_AUTH_VALIDATION.md) · [Release checklist](PUBLIC_RELEASE_CHECKLIST.md)

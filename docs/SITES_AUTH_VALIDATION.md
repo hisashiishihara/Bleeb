@@ -8,6 +8,6 @@ Bleeb uses ChatGPT Sites-provided authenticated identity for all owner operation
 - Reader visibility is currently `owner` or `public`. Membership and paid access are disabled.
 - Publishing an article does not change the Site's sharing policy. Verify both separately before making a Site public.
 
-**Before public deployment:** verify the current Site sharing policy, owner-only editor routes, private R2 access, MCP authorization and anonymous read paths in the target environment. Do not commit real owner identities, tokens, Site URLs, or test article IDs.
+**After every deployment to the public Site:** verify current Site sharing, owner-only editor routes, private R2 access, MCP authorization and anonymous read paths in the target environment. Do not commit real owner identities, tokens, Site URLs, or test article IDs.
 
 [Installation](GETTING_STARTED.md) · [Release checklist](PUBLIC_RELEASE_CHECKLIST.md)

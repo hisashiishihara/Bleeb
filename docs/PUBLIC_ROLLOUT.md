@@ -1,30 +1,26 @@
-# Owner/public operation and public rollout gate
+# Public blog operation and release boundaries
 
-Decision 2026-10-17. This document supersedes the active four-audience/member operation described in ARTICLE_ACCESS.md. The older documents and migration 0002 remain historical records.
+**Current state:** `観測と思考` is an internet-accessible ChatGPT Site at `https://blog.odorikani.net`. As reported after the **2026-10-20 v38 deployment**, public article access, noindex removal for selected public pages, RSS/sitemap, private-route rejection, and data preservation were checked on the live Site. This supersedes the **pre-public-release** instructions from 2026-10-17. GitHub repository visibility is a separate decision.
 
-## Current operation
+## Present behavior
 
-- New articles are draft + owner. publish_entry accepts only owner or public. Omission preserves public only when the current audience is already public; otherwise it uses owner. Explicit paid/registered values are rejected.
-- Reader SQL serves only status=published joined to published_revision. Non-owners can read only visibility=public. Signed-in non-owners have exactly the same rights as anonymous readers. Prior paid/registered records, if any, are readable only by the owner. No membership lookup grants reader privileges.
-- Owner archive includes all drafts and history and shows visibility. All seven MCP operations, including private reads and exports, require the existing owner ID/email check and enabled owner API.
-- Membership registration and management pages return 404. Their POST endpoints also return 404 without reading or mutating membership records, including for the owner. Navigation no longer offers membership or payment functions. Existing member records/tables are retained.
-- Owner REST mutations reject cross-origin requests with an Origin header. MCP remains server-to-server with its verified user identity.
-- Public list, permalink and metadata use the same audience-filtered reader queries. No public API accepts a revision, user ID or audience claim to bypass these queries.
-- Dynamic/no-store responses and CDN no-store prevent shared caching of audience-dependent content. Public cache optimization and SEO are outside this rollout.
-- The former runtime validation endpoint has been removed. Referrer tracking remains disabled.
+- Publishing and Site code deployment are different: D1 publication is performed by the owner; a GitHub push does not deploy ChatGPT Sites.
+- Active audiences: `owner` and `public` only. Status `draft` is not reader-visible; published reader content is the **latest saved revision**. `published_revision` is a historical publication marker, not the displayed content selector.
+- Anonymous visitors can read only `published + public`. Owner-only articles, drafts, revision history, owner pages, owner APIs and all **12 MCP tools** remain protected.
+- Registration, member administration and paid features are disabled; retained D1 tables do not grant reader access.
+- A published article edited later changes immediately for readers with access. Publishing, unpublishing or narrowing an audience requires deliberate owner action.
+- Cache control remains conservative (`private, no-store`); indexing permission is independent of caching.
+- Public home, public article detail, About and Privacy opt into indexing. Owner-only articles, management pages, archive and tag indexes remain `noindex` under current policy.
+- `/feed.xml`, `/sitemap.xml` and `/robots.txt` are public. They enumerate **only** public published articles regardless of owner login state; the homepage and static pages are also in the sitemap.
+- Referrer counting is opt-in and disabled unless `AI_DIARY_REFERRER_TRACKING_ENABLED=true`.
 
-## Required Site approval
+## Safe updates to the existing Site
 
-The existing Site remains owner-private while code and HTTP safeguards are tested. A documented service-access token supplies no user identity; it can exercise app-level anonymous reader behavior behind the private Site boundary. This is not an end-to-end anonymous internet visit.
+1. Confirm the reviewed GitHub commit passed tests, type-check and production build.
+2. **Update the existing Site**. Do not create a replacement, change its custom domain, reconnect/recreate its plugin, reset D1/R2, modify article visibility, or run old migrations again.
+3. Reconfirm verified owner authentication, anonymous 404s for private routes/media and MCP mutation denial.
+4. Check real HTTP metadata: no `X-Robots-Tag: noindex` on intentionally indexable pages, and no accidentally inherited `index` on private pages.
+5. Check public RSS/sitemap against the current public-only D1 rows, ensure non-public entries are absent, and verify redirect/canonical URLs.
+6. Report GitHub commit, CI run, Sites deployment ID, checked production URLs and any unverified browser actions.
 
-Before changing Sites access_mode to public, obtain the owner's explicit confirmation. Describe exactly which fictional article is already marked public and will become readable. Do not publish previous drafts or conversation history.
-
-After approval, change only the Site audience, then immediately verify:
-
-1. No-token/no-cookie GET of the public fictional permalink and homepage returns only its published revision.
-2. Owner-only entries, drafts, unreleased revisions, owner pages, get/export APIs and all MCP calls reject unsigned and forged-identity clients.
-3. Requests with RSC/prefetch headers or a requested private revision do not reveal private metadata or content.
-4. No-store headers remain effective; switching the fictional article back to owner immediately makes anonymous reads return 404.
-5. Real owner MCP calls can publish a selected revision to public without application redeployment and withdraw it again.
-
-If a real public-ingress protection fails, restore owner-only Site access immediately and report the failure. Keep a record of the returned access policy. No custom domain, payments, membership development or real article publishing is authorized by preparation alone.
+**Historical note:** The original 2026-10-17 document required explicit owner approval *before the initial public launch*. That gate has already been passed for this Site. It must not be interpreted as permission to expose any additional previously private content or change GitHub repository visibility.

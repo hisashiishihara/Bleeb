@@ -16,6 +16,11 @@ test("reader-facing title is 観測と思考; Bleeb is the linked engine credit"
  assert.doesNotMatch(layout,/aria-label="aiDiary ホーム"/);
  assert.match(home,/<h1>観測と思考<\/h1>/);
  assert.doesNotMatch(home,/TECHNOLOGY \/ NOTES \/ IDEAS/);
+ assert.ok(home.includes("技術の変化を読み、企業や市場の未来を予測する個人の blog"));
+ assert.ok(layout.includes("技術の変化を読み、企業や市場の未来を予測する個人の blog"));
+ const discovery=read("lib/public-discovery.ts");
+ assert.ok(discovery.includes("技術の変化を読み、企業や市場の未来を予測する個人の blog"));
+
 });
 
 test("header navigation follows verified owner state instead of fixed login link",()=>{

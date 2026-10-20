@@ -1,88 +1,36 @@
-# aiDiary: private archive, audiences and referrers
+# Owner archive, article access and referrers
 
-Decision 2026-10-17. Source of truth for the proposed additional features.
+This page describes **current** Bleeb behavior. The original 2026-10-17 proposals for four audience levels and an owner-private-only Site are historical; see [active access rules](ARTICLE_ACCESS.md) and [public operation](PUBLIC_ROLLOUT.md).
 
-## Private archive
+## Owner archive and editor
 
-Route: `/owner/archive` with `/owner/archive/{entry_id}`.
+- `/owner/archive`, `/owner/archive/{id}`, `/owner/archive/{id}/edit`, `/owner/new` and `/owner/media` require verified owner identity.
+- The archive includes drafts, published articles and every preserved revision, including versions never made public. It offers filters and historical revision viewing.
+- The owner can edit Markdown, upload media, change the hero, publish, unpublish or delete **private drafts**. The archive is **not** read-only; browser REST and Site-hosted MCP share the owner gate.
+- Reader pages never reveal private drafts/revisions through home, article metadata, RSS, sitemap, archive filtering or media routes.
+- Responses remain private/no-store and owner/private routes remain noindex.
 
-- Authenticated **owner only**, verified with the exact same Sites-injected identity and owner email check as the MCP tools.
-- Includes drafts, published articles, and every preserved revision (including revisions never published).
-- Filters: status, keyword appearing in any saved title/body/summary, and exact tag in any saved revision.
-- The owner can inspect an explicit historic revision without making it public or editing it.
-- No endpoint leaks private content through home lists, sitemap, metadata, search indexes or generic API.
-- Dynamic routes are non-indexable and must be verified uncached (`Cache-Control: private, no-store`) before expanding Site access beyond owner-only.
-- No owner account name, email, or other secret is embedded in HTML or source.
+## Audience and publishing
 
-This is a **read-only** UI. Normal ChatGPT MCP commands remain the only editor.
+Only `owner` and `public` are active article audiences. A draft is never reader-visible. A published owner-only article can be viewed by its owner, not anonymous readers. A published public article can be read anonymously. Registered/paid membership is disabled even if older D1 values exist.
 
-## Article state and audience
+Reader pages select the **latest saved revision** of a published entry after audience authorization. Once published, further saves to the same entry become visible immediately without changing its audience. `published_revision` is a legacy marker, not the reader-visible revision. Explicit publish/unpublish controls the status and audience.
 
-Implemented in the access-control change; [ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) is authoritative for the implementation and testing boundary. Site-wide public sharing remains a separate approval.
+## Optional referrer counting
 
-A saved draft and the *published revision* are different concepts.
+The owner-only `/owner/referrers` dashboard provides approximate hostname/day/article referral events for public articles, **only when** `AI_DIARY_REFERRER_TRACKING_ENABLED=true` is configured. The flag is opt-in; no live production enabling is assumed here.
 
-- `draft`: only the owner, regardless of selected audience.
-- `published + owner`: private personal knowledge article, deliberately marked as published internally.
-- `published + registered`: owner and authenticated members.
-- `published + paid`: owner and verified active subscribers.
-- `published + public`: anonymous readers and everyone above.
+- `app/components/referrer-ping.tsx` sends a browser event on a public article page.
+- `POST /api/referrer` validates same-origin requests and public published slugs.
+- `drizzle/0001_referrers.sql` stores daily counters of source hostnames.
+- The database does **not** record full referring URLs, search query terms, IPs, cookies, raw user agents or visitor IDs.
+- Counts may contain repeat visits and are not unique visitors or a backlink crawler. Bots or abuse can affect totals.
+- Before enabling, review Site rate limits, traffic impact and abuse defenses.
 
-Membership and paid entitlements are distinct from ChatGPT Plus or other OpenAI plan subscriptions.
-The four audiences, reader registration and owner membership management are implemented as described in ARTICLE_ACCESS.md. Do not flip the owner-only Site policy without separate authorization and real non-owner account validation. Payment provider integration and general-public sharing remain outside this release.
+For Google search impressions and keywords, use a verified [Google Search Console](https://search.google.com/search-console/) property. Its Links report is not a complete backlink crawler or a freely exposed Links API. Search Console verification never justifies indexing owner/private articles.
 
-## tDiary-like referrers (first phase)
+## Deployment checks
 
-The private `/owner/referrers` dashboard summarizes **actual visits to published pages**
-for the past 90 days, grouped by referrer hostname and article. This is a referrer
-counter, not a backlink crawler. A page containing a link that nobody clicks does
-not appear.
+Run tests/type-check/build, deploy the reviewed GitHub commit explicitly to the existing Site, and check real anonymous/private access. Verify any new route or metadata change does not expose owner content. Don't reapply migrations or change the Site audience just to test referral analytics.
 
-Implementation:
-- `app/components/referrer-ping.tsx`: browser event only after real public article view.
-- `POST /api/referrer`: same-origin request, no cookies; separately gated by
-  `AI_DIARY_REFERRER_TRACKING_ENABLED=true`. Disabled if unset.
-- `drizzle/0001_referrers.sql`: daily hostname counts in D1.
-- Server validates published-only article slug and normalizes referrer to HTTPS hostname.
-- No IP, cookie ID, user agent, path, search query, fragment, or raw referer is kept.
-- Duplicate page loads may be counted; counts are *events*, not users.
-- With the Site still owner-only, leave tracking disabled. Do not enable before
-  checking Sites rate limits, bot effects and abuse protections for a public endpoint.
-- This is opt-in anonymous statistics, not a security-sensitive author mutation; any
-  visitor may generate an approximate signal, so do not use it for financial settlement
-  or access decisions.
-
-Browser referrer policies often disclose only origin for cross-origin navigation.
-This makes exact source-page URLs and Google search terms unavailable in many cases.
-
-## Google Search Console (future)
-
-For **external links Google has discovered**, use Search Console's *Links* report.
-It is sampled, not a complete live index of links. The Search Console API documents
-Search Analytics / Sitemaps / Sites / URL Inspection, not a public Links-report API.
-Consequently do not fake a direct automatic backlink listing.
-
-For **search phrases, clicks, impressions and positions**, Search Analytics API
-can be used later with owner-authorized Google OAuth and a verified Site property.
-Search Console data only exists for eligible, Google-visible pages. Never index
-private drafts, subscriber content, or owner archive to make analytics work.
-
-Docs:
-- https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referrer-Policy
-- https://support.google.com/webmasters/answer/9049606?hl=en
-- https://developers.google.com/webmaster-tools/v1/searchanalytics/query
-- https://developers.google.com/webmaster-tools/v1/api_reference_index
-
-## Deployment validation
-
-1. Run automated tests and build, then deploy by Sites workflow; GitHub push does not deploy.
-2. Apply D1 migration 0001; verify old article/revision data unchanged.
-3. As owner, browse `/owner/archive`, search and read all fake revisions.
-4. As unsigned user and forged-header caller, prove both owner archive routes and
-   referrer dashboard return 404/403 without any cached body content.
-5. Leave tracking disabled until public read access and abuse guards are reviewed.
-6. Later, test allowed public post external-referrer events and verify D1 aggregates
-   only normalized domain/day/article; unpublished and guessed slugs add no rows.
-7. Keep the Site owner-only, no custom domain and no real articles during testing.
-
-No public rollout or payment setup is authorized here.
+[Current access model](ARTICLE_ACCESS.md) · [Current deployment](SITES_HANDOFF.md)

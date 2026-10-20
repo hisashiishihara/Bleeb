@@ -1,6 +1,6 @@
-# aiDiary Requirements
+# Bleeb Requirements
 
-**Status:** canonical product requirements, revised 2026-10-17.
+**Status:** original product requirements (2026-10-17), reconciled with the implemented October 2026 blog. Active behavior is summarized in [DESIGN.md](DESIGN.md), [ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) and [PUBLIC_ROLLOUT.md](PUBLIC_ROLLOUT.md).
 **Architecture decision:** ChatGPT Sites + Site-hosted MCP plugin + D1.
 **Supersedes:** original Python CGI + Apache + no-database design.
 
@@ -12,7 +12,7 @@ The essential workflow is:
 
 > Save this as a draft. Revise it. Publish it. Update the published article.
 
-ChatGPT is the primary *editorial interface*. aiDiary is the separate content store and public publisher. ChatGPT conversations are **never themselves public**.
+ChatGPT is the primary *editorial interface*. Bleeb is the separate content store and public publisher. ChatGPT conversations are **never themselves public**.
 
 ## 2. Users and boundaries
 
@@ -48,7 +48,7 @@ Each entry has an immutable identifier, title, stable URL slug, Markdown body, o
 - The author may explicitly publish the latest saved revision or unpublish an entry. To restore an older version, save it again as the new latest revision.
 - Unpublishing removes the entry from all public queries and its permalink (return 404 or 410). Historical content cannot be withdrawn from third-party caches; set cache policy appropriately.
 - Slug changes must be deliberate; prefer stable permalinks and explicit redirects when implemented.
-- Do not provide permanent remote deletion in MVP.
+- Published article history is retained; the owner can explicitly delete **private drafts** and individual unused media under server-side authorization. Published entries cannot be permanently deleted using the draft-delete action.
 
 ### 4.2 Authoring tools
 
@@ -126,9 +126,9 @@ Minimum ChatGPT MCP tool surface:
 
 ## 8. Non-goals in MVP
 
-Python CGI, Apache hosting, referrer-log parsing, RSS/Atom, advanced search, topic timelines, AI memory extraction, auto-publish scheduling, social features, payments, embedded LLM inference, multiple authors, local NUC dependencies, real-time collaborative editing.
+Original MVP exclusions included RSS, tags, search, and social distribution. **Some have since been implemented:** public-only RSS 2.0 and sitemap, archive filtering, tags, coarse opt-in referrer counting, and Hatena Bookmark links. These are not future-only features.
 
-RSS, tags, search, context export, and topic timelines may follow after the core publishing loop succeeds. The previous tDiary-style referrer requirement is intentionally deferred; it depended on Apache logs.
+Still outside the active scope: Python CGI/Apache hosting, paid membership/billing, automatically scheduled publication, generic multiple authors, AI memory extraction, built-in article LLM inference, NUC dependencies, and real-time collaboration.
 
 ## 9. Legal and licensing
 
@@ -137,9 +137,9 @@ The project code is licensed under BSD-3-Clause (the Modified BSD License); see 
 
 ## Article access update (2026-10-17)
 
-[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) defines the implemented independent status/visibility model, four reader audiences, server-side membership and owner management. It supersedes earlier binary public/draft assumptions. Reader queries select the latest revision of status=published entries after audience authorization; drafts and full revision history stay owner-only. Sites sharing remains owner-private, and no payment service is connected.
+[ARTICLE_ACCESS.md](ARTICLE_ACCESS.md) documents the active independent status/visibility model. Historical four-audience and member-management plans are **inactive**. Reader queries select the latest revision of status=published entries after audience authorization; drafts and full revision history remain owner-only.
 
 
 ## Current operation update (2026-10-17)
 
-Only owner/public audiences are active. Membership registration, membership management and billing are suspended. Existing schema/data are preserved. PUBLIC_ROLLOUT.md supersedes earlier active member/audience plans; changing the Sites audience to public requires explicit owner confirmation.
+Only owner/public audiences are active, and membership/payment endpoints are disabled. The existing blog Site was opened for anonymous public-article reading and now serves public-only RSS, sitemap and searchable public pages. Site-publication permission does **not** authorize broadening any article's visibility. Details: [PUBLIC_ROLLOUT.md](PUBLIC_ROLLOUT.md).

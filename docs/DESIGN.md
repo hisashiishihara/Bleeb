@@ -26,7 +26,9 @@ Every write must verify **trusted owner identity** before touching data. Anonymo
 
 ## Operations
 
-Site-hosted MCP manages draft creation, revision updates, publication, withdrawal and media actions. A small owner-only web editor is also available. Changes to articles persist in D1 without a Site code deployment. Use optimistic revision checks and idempotency keys for safe updates.
+Site-hosted MCP (**12 owner-only tools**) manages draft creation, revision updates, publication, withdrawal and media actions. A small owner-only web editor also supports copy-to-note and public-article bookmarking. Changes to articles persist in D1 without a Site code deployment. Use optimistic revision checks and idempotency keys for safe updates.
+
+Public discovery endpoints `/feed.xml` (RSS 2.0), `/sitemap.xml` and `/robots.txt` query only public, published articles, **independent of viewer identity**. The public homepage, public article metadata, About and Privacy are indexable; private/owner routes remain noindex. The production canonical host is `https://blog.odorikani.net` (currently set as `SITE_ORIGIN` in `lib/public-discovery.ts`); new installations must change this to their own domain before enabling indexing.
 
 ## Reliability and release
 
