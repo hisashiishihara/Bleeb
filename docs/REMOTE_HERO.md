@@ -8,7 +8,7 @@
 - `set_entry_hero_media` and `clear_entry_hero_media` append a revision with the
   same title, body, summary and tags; optimistic lock `expected_revision`.
 - `import_media_from_url` with `usage=hero` downloads an image to private R2,
-  records it in media_assets, then creates a new private hero revision.
+  records it in media_assets, then creates a new hero revision. This revision stays private for drafts, but is immediately visible at the existing audience for already-published articles.
   `usage=inline` uploads and returns safe Markdown for later insertion, without
   modifying the article; both accept a unique `request_id`.
 - On a **draft**, changing the hero remains private until explicitly published.
