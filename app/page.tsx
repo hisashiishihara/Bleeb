@@ -21,7 +21,7 @@ export default async function Home(){
    <section className="intro journal-intro">
      <p className="eyebrow">OBSERVATION / THOUGHT</p>
      <h1>観測と思考</h1>
-     <p className="intro-copy">技術、社会、日々の出来事。<br/>見たこと、考えたことを、記録していく。</p>
+     <p className="intro-copy">技術の変化を読み、企業や市場の未来を予測する個人の blog</p>
    </section>
    <section aria-label="最近の記事">
      <div className="section-head"><h2>最近の記事</h2><span>最新3件を紹介</span></div>
