@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {DatabaseSync} from "node:sqlite";
 import {readFileSync} from "node:fs";
+import nextConfig from "../next.config.ts";
 import {publicDiscoveryEntries,renderRss,renderSitemap} from "../lib/public-discovery.ts";
 
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
@@ -60,4 +61,14 @@ test("only publicly indexable routes opt in, owner pages stay blocked",()=>{
  for(const path of ["app/about/page.tsx","app/privacy/page.tsx"])assert.match(read(path),/index:true,follow:true/);
  for(const path of ["app/owner/archive/page.tsx","app/owner/archive/[id]/page.tsx","app/owner/new/page.tsx"])
   assert.match(read(path),/index:false,follow:false/);
+});
+
+test("global HTTP headers do not override public robots metadata",async()=>{
+ const rules=await nextConfig.headers();
+ const blocked=rules.filter(rule=>rule.headers.some(header=>header.key.toLowerCase()==="x-robots-tag"));
+ assert.ok(blocked.length>0);
+ for(const rule of blocked)assert.match(rule.source,/^\/(?:owner|api|mcp|account|media)(?:\/|$)/);
+ for(const prefix of ["/owner/","/api/","/media/"])assert.ok(blocked.some(rule=>rule.source.startsWith(prefix)));
+ assert.ok(blocked.some(rule=>rule.source==="/mcp"));
+ assert.ok(rules.some(rule=>rule.headers.some(header=>header.key==="CDN-Cache-Control"&&header.value==="no-store")));
 });
