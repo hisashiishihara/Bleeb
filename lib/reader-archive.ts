@@ -1,4 +1,4 @@
-import { anonymous, audienceSql, type Viewer, type Visibility } from "./access.ts";
+import { anonymous, publishedReaderScope, type Viewer, type Visibility } from "./access.ts";
 
 /** Reader-only navigation. Every SQL query enforces status and audience before
  * filtering the latest saved revision; never include drafts or history.
@@ -17,7 +17,7 @@ export function parseArchiveFilters(input:{q?:string;month?:string;tag?:string;o
  return {q,month,tag,offset};
 }
 
-const scope=(viewer:Viewer)=>"e.status='published' AND e.published_revision IS NOT NULL AND ("+audienceSql(viewer)+")";
+const scope=publishedReaderScope;
 
 export async function readableArchive(db:D1Database,viewer:Viewer=anonymous,f:ArchiveFilters,limit=30) {
  const conditions=[scope(viewer)];

@@ -101,3 +101,12 @@ test("homepage excerpt stops within section one at Markdown paragraph boundaries
  assert.doesNotMatch(excerpt,/## 2\.|秘密の後半/);
  assert.equal(homeExcerpt(["第一段落。","```stock\nNASDAQ:ADBE\n```"].join("\n\n")), "第一段落。");
 });
+
+// Publication and audience scope are shared across listing and archive queries.
+const {publishedReaderScope}=await import("../lib/access.ts");
+test("reader scope guards publication marker and viewer visibility",()=>{
+ assert.match(publishedReaderScope({owner:false,registered:false,paid:false}),/e.status='published'/);
+ assert.match(publishedReaderScope({owner:false,registered:false,paid:false}),/e.published_revision IS NOT NULL/);
+ assert.match(publishedReaderScope({owner:false,registered:false,paid:false}),/e.visibility='public'/);
+ assert.match(publishedReaderScope({owner:true,registered:false,paid:false}),/1=1/);
+});

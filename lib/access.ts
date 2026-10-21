@@ -24,6 +24,11 @@ export async function resolveViewer(db:D1Database, identity:Identity|null, owner
   return owner && identity ? {owner:true,registered:false,paid:false} : anonymous;
 }
 /** Constant SQL, never assembled from client-controlled identifiers or claims. */
+/** Shared published-reader condition. Keep the publication marker check even
+ * when the displayed revision is latest_revision. */
+export function publishedReaderScope(viewer:Viewer):string {
+ return "e.status='published' AND e.published_revision IS NOT NULL AND ("+audienceSql(viewer)+")";
+}
 export function audienceSql(viewer:Viewer): string {
   if (viewer.owner) return "1=1";
   return "e.visibility='public'";

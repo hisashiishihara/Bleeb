@@ -1,4 +1,4 @@
-import { anonymous, audienceSql, type Viewer, type Visibility } from "./access.ts";
+import { anonymous, publishedReaderScope, type Viewer, type Visibility } from "./access.ts";
 /** Only entries already in published status are readable; their newest saved
  * revision is the displayed revision. Audience filtering still applies first.
  */
@@ -17,7 +17,7 @@ export async function readableRecentFull(db:D1Database,viewer:Viewer=anonymous,l
   return (await db.prepare(
     "SELECT e.slug,e.published_at,e.updated_at,e.visibility,r.title,r.summary,r.body_md,r.hero_media_id,r.hero_alt_text,r.tags_json "+
     "FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.latest_revision "+
-    "WHERE e.status='published' AND e.published_revision IS NOT NULL AND ("+audienceSql(viewer)+") "+
+    "WHERE "+publishedReaderScope(viewer)+" "+
     "ORDER BY e.published_at DESC,e.id DESC LIMIT ?"
   ).bind(bounded).all<ReaderEntry>()).results;
 }
