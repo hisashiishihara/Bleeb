@@ -4,6 +4,16 @@ export type DiscoveryEntry={
  published_at:string; updated_at:string;
 };
 export const SITE_ORIGIN="https://blog.odorikani.net";
+export const SITE_TITLE="観測と思考";
+export const SITE_DESCRIPTION="技術の変化を読み、企業や市場の未来を予測する個人の blog";
+export function siteMetadata(config:{SITE_ORIGIN?:string;SITE_TITLE?:string;SITE_DESCRIPTION?:string}) {
+ const raw=config.SITE_ORIGIN?.trim()||SITE_ORIGIN;
+ let parsed:URL;
+ try { parsed=new URL(raw); } catch { throw new Error("SITE_ORIGIN must be an HTTPS origin"); }
+ if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.pathname!=="/"||parsed.search||parsed.hash)
+  throw new Error("SITE_ORIGIN must be a bare HTTPS origin");
+ return {origin:parsed.origin,title:config.SITE_TITLE?.trim()||SITE_TITLE,description:config.SITE_DESCRIPTION?.trim()||SITE_DESCRIPTION};
+}
 export async function publicDiscoveryEntries(db:D1Database):Promise<DiscoveryEntry[]> {
  const rows=await db.prepare(
   "SELECT e.slug,e.published_at,e.updated_at,r.title,r.summary "+
@@ -16,7 +26,7 @@ export async function publicDiscoveryEntries(db:D1Database):Promise<DiscoveryEnt
 const xml=(text:string)=>text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,"")
  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
  .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
-export function renderRss(entries:DiscoveryEntry[],origin=SITE_ORIGIN):string {
+export function renderRss(entries:DiscoveryEntry[],origin=SITE_ORIGIN,title=SITE_TITLE,description=SITE_DESCRIPTION):string {
  const items=entries.slice(0,50).map(item=>{
   const url=origin+"/posts/"+encodeURIComponent(item.slug);
   return "<item><title>"+xml(item.title)+"</title><link>"+xml(url)+"</link>"+
@@ -27,8 +37,8 @@ export function renderRss(entries:DiscoveryEntry[],origin=SITE_ORIGIN):string {
  const latest=entries.reduce((value,item)=>Math.max(value,Date.parse(item.updated_at)||0),0);
  return '<?xml version="1.0" encoding="UTF-8"?>'+
   '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'+
-  '<title>観測と思考</title><link>'+xml(origin)+'/</link>'+
-  '<description>技術の変化を読み、企業や市場の未来を予測する個人の blog</description><language>ja</language>'+
+  '<title>'+xml(title)+'</title><link>'+xml(origin)+'/</link>'+
+  '<description>'+xml(description)+'</description><language>ja</language>'+
   '<atom:link href="'+xml(origin)+'/feed.xml" rel="self" type="application/rss+xml"/>'+
   (latest?'<lastBuildDate>'+new Date(latest).toUTCString()+'</lastBuildDate>':"")+
   items+"</channel></rss>";

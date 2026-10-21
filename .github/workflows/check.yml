@@ -1,4 +1,4 @@
-name: Check aiDiary
+name: Check Bleeb
 on:
   push:
     branches: [main, 'build/**']

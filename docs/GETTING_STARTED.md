@@ -13,7 +13,7 @@ Bleeb runs on ChatGPT Sites with Site-hosted MCP, D1 (`DB`) and private R2 (`MED
 1. Ask Work to create a **new private Site** from `hisashiishihara/Bleeb`, including `app/`, `lib/`, `plugin/`, `drizzle/` and `.openai/hosting.json`.
 2. Bind D1 as `DB` and R2 as `MEDIA`. Apply numbered migrations **only to the new database**; never reset production data.
 3. Configure owner email and test Sites-injected identity. Enable `AI_DIARY_OWNER_API_ENABLED=true` only after spoofed/unsigned owner access is rejected.
-4. Confirm the new Site's public origin in metadata, RSS, sitemap and robots before indexing; the reference deployment uses `blog.odorikani.net`.
+4. Set `SITE_ORIGIN` (bare HTTPS origin), `SITE_TITLE` and `SITE_DESCRIPTION` for a new Site. Defaults preserve the reference deployment. Check RSS, sitemap and robots before indexing. Layout, About, Privacy and other site-specific text still require customization.
 5. Publish the private test Site; install/connect its Site-hosted MCP plugin and verify test drafts, editing, publishing, unpublishing and media access.
 6. Validate public vs owner-only read boundaries before opening a test Site to anonymous visitors.
 
