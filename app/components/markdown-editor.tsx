@@ -317,7 +317,7 @@ export function MarkdownEditor({initial}:{initial:Initial}){
       <h2>はてなブックマーク</h2>
       {status==="published"&&activeVisibility==="public"&&hatenaHref?
         <div className="editor-actions">
-          <a className="editor-edit-link" href={hatenaHref} target="_blank" rel="noopener noreferrer">B! この公開記事をはてブに登録 ↗</a>
+          <a className="editor-primary" href={hatenaHref} target="_blank" rel="noopener noreferrer">B! この公開記事をはてブに登録 ↗</a>
         </div>:
         <p className="editor-hint">はてなブックマークへ登録できるのは一般公開中の記事だけです。非公開の下書きやオーナー限定記事は登録対象にしません。</p>}
       <p className="editor-hint">はてな側の画面でログインし、必要に応じてコメントやタグを入力して登録してください。Bleeb から自動登録はしません。</p>
