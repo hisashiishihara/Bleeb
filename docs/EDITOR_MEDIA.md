@@ -106,7 +106,7 @@ must not delete objects reachable from any retained revision.
 10. Do not use real private images or videos for acceptance tests.
 
 **Do not claim upload/media access is verified until real Sites + R2 tests
-pass.** GitHub CI currently tests source, SQL and type/build checks only.
+pass.** Work-local automated tests cover source, isolated SQL and mocked storage; type checks and builds do not prove live platform behavior.
 
 No membership/billing development, changes to public Site audience,
 or external hosting is part of this feature.

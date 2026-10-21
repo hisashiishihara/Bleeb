@@ -6,8 +6,8 @@ import { readableRecentFull } from "../lib/reader-store.ts";
 import { homeExcerpt } from "../lib/home-excerpt.ts";
 import { parseArchiveFilters,readableArchive,readableArchiveMonths,readableTagCounts } from "../lib/reader-archive.ts";
 
-const anon={owner:false,registered:false,paid:false};
-const owner={owner:true,registered:false,paid:false};
+const anon={owner:false};
+const owner={owner:true};
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 function fixture(){
@@ -100,4 +100,13 @@ test("homepage excerpt stops within section one at Markdown paragraph boundaries
  assert.match(excerpt,/第二段落/);
  assert.doesNotMatch(excerpt,/## 2\.|秘密の後半/);
  assert.equal(homeExcerpt(["第一段落。","```stock\nNASDAQ:ADBE\n```"].join("\n\n")), "第一段落。");
+});
+
+// Publication and audience scope are shared across listing and archive queries.
+const {publishedReaderScope}=await import("../lib/access.ts");
+test("reader scope guards publication marker and viewer visibility",()=>{
+ assert.match(publishedReaderScope({owner:false}),/e.status='published'/);
+ assert.match(publishedReaderScope({owner:false}),/e.published_revision IS NOT NULL/);
+ assert.match(publishedReaderScope({owner:false}),/e.visibility='public'/);
+ assert.match(publishedReaderScope({owner:true}),/1=1/);
 });

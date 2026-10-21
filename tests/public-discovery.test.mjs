@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {DatabaseSync} from "node:sqlite";
 import {readFileSync} from "node:fs";
 import nextConfig from "../next.config.ts";
-import {publicDiscoveryEntries,renderRss,renderSitemap} from "../lib/public-discovery.ts";
+import {publicDiscoveryEntries,renderRss,renderSitemap,siteMetadata} from "../lib/public-discovery.ts";
 
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 function fixture(){
@@ -72,4 +72,12 @@ test("global HTTP headers do not override public robots metadata",async()=>{
  assert.ok(blocked.some(rule=>rule.source==="/mcp"));
  assert.ok(blocked.some(rule=>rule.source==="/login"));
  assert.ok(rules.some(rule=>rule.headers.some(header=>header.key==="CDN-Cache-Control"&&header.value==="no-store")));
+});
+
+test("site metadata rejects non-origin URLs and escapes customized RSS branding",()=>{
+ const s=siteMetadata({SITE_ORIGIN:"https://example.org",SITE_TITLE:"Demo & <Blog>",SITE_DESCRIPTION:"Articles & notes"});
+ assert.equal(s.origin,"https://example.org");
+ assert.match(renderRss([],s.origin,s.title,s.description),/Demo &amp; &lt;Blog&gt;/);
+ for(const url of ["http://example.org","https://example.org/path","https://u@example.org","https://example.org/?q=1"])
+  assert.throws(()=>siteMetadata({SITE_ORIGIN:url}),/SITE_ORIGIN/);
 });

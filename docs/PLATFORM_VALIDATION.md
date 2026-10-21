@@ -16,7 +16,7 @@ The owner-provided ChatGPT Work report for **v38 (2026-10-20)** describes:
 
 This is a **reported deployment outcome**, not independent confirmation of later commits.
 
-## Still separate from source and CI verification
+## Still separate from source and Work-local verification
 
 - Actual note clipboard/paste, Hatena Bookmark clicks, mobile rendering, and external forms are **browser-level** checks.
 - Google Search Console verification and search-result inclusion are separate from removing `noindex`.

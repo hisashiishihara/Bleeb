@@ -30,6 +30,13 @@ export function matchesSignature(type:MediaType, bytes:Uint8Array):boolean {
 export function referencesMedia(body:string,id:string):boolean {
  return MEDIA_ID_RE.test(id)&&body.includes("/media/"+id);
 }
+/** A stored asset is in use when the latest reader-visible revision refers to
+ * its canonical inline URL or selects it as the hero image. */
+export function revisionReferencesMedia(
+ revision:{body_md:string;hero_media_id:string|null}|null|undefined,id:string
+):boolean {
+ return !!revision && (revision.hero_media_id===id || referencesMedia(revision.body_md,id));
+}
 export function mediaMarkdown(id:string,name:string,type:MediaType):string {
  const safeName=name.replace(/[\[\]\\\n\r]/g," ").slice(0,90).trim()||"media";
  return "!["+(kind(type)==="video"?"video:":"")+safeName+"](/media/"+id+")";

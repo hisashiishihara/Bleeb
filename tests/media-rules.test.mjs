@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
-  matchesSignature,validMediaType,mediaMaxBytes,mediaMarkdown,referencesMedia,parseByteRange,
+  matchesSignature,validMediaType,mediaMaxBytes,mediaMarkdown,referencesMedia,revisionReferencesMedia,parseByteRange,
   IMAGE_MAX_BYTES,VIDEO_MAX_BYTES,MEDIA_ID_RE
 } from "../lib/media-rules.ts";
 const asset="550e8400-e29b-41d4-a716-446655440000";
@@ -60,4 +60,13 @@ test("media SQL keeps asset ownership and old published revision intact",()=>{
   assert.equal(data.body_md.includes("111e8400"),false);
   assert.throws(()=>d.prepare("INSERT INTO media_assets VALUES('x','nonexistent','key','image/png',8,'file','t')").run());
  }finally{d.close();}
+});
+
+test("visible revision media references include inline and hero assets without false positives",()=>{
+ const inline={body_md:"![x](/media/"+asset+")",hero_media_id:null};
+ assert.equal(revisionReferencesMedia(inline,asset),true);
+ assert.equal(revisionReferencesMedia({body_md:"plain text",hero_media_id:asset},asset),true);
+ assert.equal(revisionReferencesMedia({body_md:"plain text",hero_media_id:null},asset),false);
+ assert.equal(revisionReferencesMedia(null,asset),false);
+ assert.equal(revisionReferencesMedia(inline,"invalid-media-id"),false);
 });

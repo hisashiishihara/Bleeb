@@ -20,6 +20,19 @@ Setup requires access to ChatGPT Sites, owner authentication, and an MCP connect
 
 [Official Sites guide](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites) · [Public release checklist](docs/PUBLIC_RELEASE_CHECKLIST.md)
 
+## Development checks
+
+Use the ChatGPT Work development environment and GitHub for source changes. GitHub Actions workflows are intentionally removed; no NUC, VPS or separate CI runner is required.
+
+```sh
+npm install
+npm test
+npm run typecheck
+npm run build
+```
+
+Run all checks before updating `main`. A GitHub push does not deploy an existing Site; production deployment is a separate, explicitly requested action. Tests use isolated SQLite databases and mocked R2, not production data.
+
 ## License
 
 [BSD-3-Clause](LICENSE). You may use, modify, and redistribute the code under its terms. Authors retain their own rights to posts and media.

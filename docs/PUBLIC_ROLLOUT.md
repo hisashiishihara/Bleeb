@@ -21,6 +21,6 @@
 3. Reconfirm verified owner authentication, anonymous 404s for private routes/media and MCP mutation denial.
 4. Check real HTTP metadata: no `X-Robots-Tag: noindex` on intentionally indexable pages, and no accidentally inherited `index` on private pages.
 5. Check public RSS/sitemap against the current public-only D1 rows, ensure non-public entries are absent, and verify redirect/canonical URLs.
-6. Report GitHub commit, CI run, Sites deployment ID, checked production URLs and any unverified browser actions.
+6. Report GitHub commit, Work test/typecheck/build results, Sites deployment ID, checked production URLs and any unverified browser actions.
 
 **Historical note:** The original 2026-10-17 document required explicit owner approval *before the initial public launch*. That gate has already been passed for this Site. It must not be interpreted as permission to expose any additional previously private content or change GitHub repository visibility.

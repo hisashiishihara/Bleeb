@@ -1,5 +1,5 @@
 import { DiaryError, entryId } from "./input.ts";
-import { MEDIA_ID_RE, referencesMedia } from "./media-rules.ts";
+import { MEDIA_ID_RE, revisionReferencesMedia } from "./media-rules.ts";
 
 export type AssetSummary = {
  id:string;entry_id:string;storage_key:string;content_type:string;byte_size:number;
@@ -28,7 +28,7 @@ export async function deleteMedia(
   "r.entry_id=e.id AND r.revision=e.latest_revision "+
   "WHERE e.id=? AND e.status='published' AND e.published_revision IS NOT NULL"
  ).bind(media.entry_id).first<{body_md:string;hero_media_id:string|null}>();
- if(active && (referencesMedia(active.body_md,mediaId)||active.hero_media_id===mediaId))
+ if(revisionReferencesMedia(active,mediaId))
   throw new DiaryError("media_in_published_revision",
    "Remove this file from the published article revision before deleting",409);
 
@@ -58,6 +58,6 @@ export async function ownerArticleMedia(db:D1Database,articleId:string){
  return {entry:article,assets:rows.results.map(row=>({
   id:row.id,content_type:row.content_type,byte_size:row.byte_size,
   original_name:row.original_name,created_at:row.created_at,
-  in_published_revision:!!active&&(referencesMedia(active.body_md,row.id)||active.hero_media_id===row.id)
+  in_published_revision:revisionReferencesMedia(active,row.id)
  }))};
 }

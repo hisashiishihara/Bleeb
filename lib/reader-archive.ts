@@ -1,4 +1,4 @@
-import { anonymous, audienceSql, type Viewer, type Visibility } from "./access.ts";
+import { anonymous, publishedReaderScope, type Viewer, type Visibility } from "./access.ts";
 
 /** Reader-only navigation. Every SQL query enforces status and audience before
  * filtering the latest saved revision; never include drafts or history.
@@ -17,10 +17,8 @@ export function parseArchiveFilters(input:{q?:string;month?:string;tag?:string;o
  return {q,month,tag,offset};
 }
 
-const scope=(viewer:Viewer)=>"e.status='published' AND e.published_revision IS NOT NULL AND ("+audienceSql(viewer)+")";
-
 export async function readableArchive(db:D1Database,viewer:Viewer=anonymous,f:ArchiveFilters,limit=30) {
- const conditions=[scope(viewer)];
+ const conditions=[publishedReaderScope(viewer)];
  const values:(string|number)[]=[];
  if(f.month){
   // Tokyo's publishing calendar is UTC+9 (no daylight-saving time).
@@ -46,7 +44,7 @@ export async function readableArchive(db:D1Database,viewer:Viewer=anonymous,f:Ar
 export async function readableArchiveMonths(db:D1Database,viewer:Viewer=anonymous){
  const rows=await db.prepare(
   "SELECT strftime('%Y-%m',e.published_at,'+9 hours') AS month,COUNT(*) AS count "+
-  "FROM entries e WHERE "+scope(viewer)+" GROUP BY month ORDER BY month DESC LIMIT 240"
+  "FROM entries e WHERE "+publishedReaderScope(viewer)+" GROUP BY month ORDER BY month DESC LIMIT 240"
  ).all<{month:string;count:number}>();
  return rows.results;
 }
@@ -56,7 +54,7 @@ export async function readableTagCounts(db:D1Database,viewer:Viewer=anonymous){
   "SELECT jt.value AS tag,COUNT(*) AS count FROM entries e "+
   "JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.latest_revision "+
   "JOIN json_each(CASE WHEN json_valid(r.tags_json) THEN r.tags_json ELSE '[]' END) jt "+
-  "WHERE "+scope(viewer)+" AND jt.type='text' AND length(jt.value)>0 "+
+  "WHERE "+publishedReaderScope(viewer)+" AND jt.type='text' AND length(jt.value)>0 "+
   "GROUP BY jt.value ORDER BY count DESC,jt.value ASC LIMIT 200"
  ).all<{tag:string;count:number}>();
  return rows.results;

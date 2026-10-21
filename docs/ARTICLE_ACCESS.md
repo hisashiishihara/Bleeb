@@ -22,7 +22,7 @@
 
 Sites supplies trusted owner identity; server-side writes/owner reads require both the authenticated user identity and matching configured owner email, with `AI_DIARY_OWNER_API_ENABLED=true`. Incoming client-controlled identity claims cannot confer access. Owner REST mutations also reject cross-origin Origin headers. The currently active MCP surface has **12 owner-only tools**.
 
-Non-owner sign-in provides **no** membership entitlement. The `/account`, `/owner/members`, `/api/membership` and member-management endpoints are disabled. D1 records are preserved.
+Non-owner sign-in provides **no** membership entitlement. The `/account`, `/owner/members`, `/api/membership` and member-management routes and their unused write functions have been removed. The reader only tracks owner status; it never queries or updates membership. Existing D1 tables, migrations and historical visibility values are preserved.
 
 Reader metadata and media endpoints enforce the same audience boundary. Private responses must not be shared in caches. Public articles can be indexed, while owner-only articles and management pages remain noindex.
 

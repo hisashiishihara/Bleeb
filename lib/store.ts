@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { DiaryError, entryId, requestId, revisionNumber, validateDraft, slugFor } from "./input";
 import { makeExport, type ExportEntry, type ExportRevision } from "./export";
 
-type Entry = ExportEntry;
 import { visibility } from "./access";
 import { deleteMedia } from "./media-deletion";
 import { bucket, createMedia } from "./media-store";
@@ -10,6 +9,7 @@ import { downloadImage, configuredImageHosts } from "./remote-image";
 import { MEDIA_ID_RE } from "./media-rules";
 import { downloadChatGPTImage } from "./chatgpt-file";
 export { readableEntries as publicEntries, readableEntry as publicEntry } from "./reader-store";
+type Entry = ExportEntry;
 type Revision = ExportRevision;
 type MutationRow = { operation: string; response_json: string };
 type DB = D1Database;
@@ -41,22 +41,16 @@ async function prior(db: DB, id: string): Promise<MutationRow | null> {
 }
 
 async function mutate<T>(db: DB, id: string, operation: string, response: T, writes: D1PreparedStatement[]): Promise<T> {
-  const previous = await prior(db, id);
-  if (previous) {
-    if (previous.operation !== operation) throw new DiaryError("request_conflict", "request ID used for another operation", 409);
-    return JSON.parse(previous.response_json) as T;
-  }
+  const previous = await completedMutation<T>(db, id, operation, "request ID used for another operation");
+  if (previous) return previous;
   const save = db.prepare("INSERT INTO mutation_requests (request_id,operation,response_json,created_at) VALUES (?,?,?,?)")
     .bind(id, operation, JSON.stringify(response), NOW());
   try {
     // D1 batch is transactional: an error rolls back all statements.
     await db.batch([...writes, save]);
   } catch (error) {
-    const concurrent = await prior(db, id);
-    if (concurrent) {
-      if (concurrent.operation !== operation) throw new DiaryError("request_conflict", "request ID collision", 409);
-      return JSON.parse(concurrent.response_json) as T;
-    }
+    const concurrent = await completedMutation<T>(db, id, operation);
+    if (concurrent) return concurrent;
     if (String(error).includes("UNIQUE") || String(error).includes("FOREIGN KEY")) {
       throw new DiaryError("conflict", "Concurrent update or duplicate slug", 409);
     }
@@ -65,13 +59,13 @@ async function mutate<T>(db: DB, id: string, operation: string, response: T, wri
   return response;
 }
 
-/** Replay a completed article mutation, rejecting reuse by another operation. */
-async function completedArticleMutation(db:DB,id:string,operation:string):Promise<unknown|null>{
+/** Replay before validation or external I/O; reject cross-operation request IDs. */
+async function completedMutation<T=Record<string,unknown>>(db:DB,id:string,operation:string,message="request ID collision"):Promise<T|null>{
  const existing=await prior(db,id);
  if(!existing)return null;
  if(existing.operation!==operation)
-  throw new DiaryError("request_conflict","request ID collision",409);
- return JSON.parse(existing.response_json);
+  throw new DiaryError("request_conflict",message,409);
+ return JSON.parse(existing.response_json) as T;
 }
 
 async function requireEntry(db: DB, id: string): Promise<Entry> {
@@ -80,10 +74,18 @@ async function requireEntry(db: DB, id: string): Promise<Entry> {
   return row;
 }
 
+/** Check optimistic locking before creating a revision or touching R2. */
+async function requireCurrentRevision(db:DB,id:string,expected:number,message?:string):Promise<Entry>{
+ const entry=await requireEntry(db,id);
+ if(entry.latest_revision!==expected)
+  throw new DiaryError("stale_revision",message??("Expected "+expected+", current "+entry.latest_revision),409);
+ return entry;
+}
+
 export async function saveDraft(db: DB, args: unknown) {
   const a = args as Record<string,unknown>;
   const req = requestId(a.request_id);
-  const replay = await completedArticleMutation(db,req,"save_draft");
+  const replay = await completedMutation(db,req,"save_draft");
   if(replay)return replay;
   const draft = validateDraft(a);
   const id = crypto.randomUUID();
@@ -125,13 +127,10 @@ export async function updateEntry(db: DB, args: unknown) {
   const id = entryId(a.entry_id);
   const req = requestId(a.request_id);
   const expected = revisionNumber(a.expected_revision);
-  const replay = await completedArticleMutation(db,req,"update_entry");
+  const replay = await completedMutation(db,req,"update_entry");
   if(replay)return replay;
   const draft = validateDraft(a);
-  const entry = await requireEntry(db, id);
-  if (entry.latest_revision !== expected) {
-    throw new DiaryError("stale_revision", "Expected " + expected + ", current " + entry.latest_revision, 409);
-  }
+  const entry = await requireCurrentRevision(db, id, expected);
   const next = expected + 1;
   const now = NOW();
   const response = { entry_id: id, status: entry.status, revision: next, published_revision: entry.published_revision };
@@ -148,7 +147,7 @@ export async function publishEntry(db: DB, args: unknown) {
   const id = entryId(a.entry_id);
   const req = requestId(a.request_id);
   const rev = revisionNumber(a.revision);
-  const replay = await completedArticleMutation(db,req,"publish_entry");
+  const replay = await completedMutation(db,req,"publish_entry");
   if(replay)return replay;
   const entry = await requireEntry(db, id);
   // The reader view always resolves the newest revision. A publish operation
@@ -176,7 +175,7 @@ export async function deleteDraft(db: DB, args: unknown) {
   const id = entryId(input.entry_id);
   const expected = revisionNumber(input.expected_revision);
   const req = requestId(input.request_id);
-  const replay = await completedArticleMutation(db,req,"delete_draft");
+  const replay = await completedMutation(db,req,"delete_draft");
   if(replay)return replay;
   const entry = await requireEntry(db,id);
   if(entry.status!=="draft" || entry.published_revision!==null || entry.visibility!=="owner")
@@ -237,7 +236,7 @@ export async function unpublishEntry(db: DB, args: unknown) {
   const a = args as Record<string,unknown>;
   const id = entryId(a.entry_id);
   const req = requestId(a.request_id);
-  const replay = await completedArticleMutation(db,req,"unpublish_entry");
+  const replay = await completedMutation(db,req,"unpublish_entry");
   if(replay)return replay;
   await requireEntry(db, id);
   const response = { entry_id: id, status: "draft", visibility: "owner", published_revision: null };
@@ -268,33 +267,13 @@ export async function exportEntries(db: DB, args: unknown) {
 }
 
 
-/** Replay a completed mutation before performing external image I/O. */
-async function priorMediaMutation(db:DB,id:string,operation:string):Promise<Record<string,unknown>|null>{
- const existing=await prior(db,id);
- if(!existing)return null;
- if(existing.operation!==operation)
-  throw new DiaryError("request_conflict","Request ID used for another operation",409);
- return JSON.parse(existing.response_json) as Record<string,unknown>;
-}
-
-/** Shared revision precondition for owner media uploads.
- * Keep this check before reading bytes or writing to R2.
- */
-async function requireCurrentMediaRevision(db: DB, id: string, value: unknown): Promise<void> {
- const expected=revisionNumber(value);
- const entry=await requireEntry(db,id);
- if(entry.latest_revision!==expected)
-  throw new DiaryError("stale_revision","Article changed; reload the latest revision",409);
-}
-
 type HeroArgs=Record<string,unknown>;
 async function newHeroRevision(db:DB,input:HeroArgs,action:string,mediaResult?:Record<string,unknown>){
  const id=entryId(input.entry_id),req=requestId(input.request_id);
- const replay=await priorMediaMutation(db,req,action);
+ const replay=await completedMutation(db,req,action,"Request ID used for another operation");
  if(replay)return replay;
  const expected=revisionNumber(input.expected_revision);
- const article=await requireEntry(db,id);
- if(article.latest_revision!==expected)throw new DiaryError("stale_revision","Expected "+expected+", current "+article.latest_revision,409);
+ const article=await requireCurrentRevision(db,id,expected);
  const heroId=input.hero_media_id;
  if(heroId!==null){
   if(typeof heroId!=="string"||!MEDIA_ID_RE.test(heroId))throw new DiaryError("invalid_media_id","Invalid hero image ID");
@@ -330,9 +309,9 @@ export async function clearHeroMedia(db:DB,args:unknown){
 export async function importMediaFromUrl(db:DB,args:unknown){
  const input=args as HeroArgs;
  const id=entryId(input.entry_id),req=requestId(input.request_id);
- const replay=await priorMediaMutation(db,req,"import_media_from_url");
+ const replay=await completedMutation(db,req,"import_media_from_url","Request ID used for another operation");
  if(replay)return replay;
- await requireCurrentMediaRevision(db,id,input.expected_revision);
+ await requireCurrentRevision(db,id,revisionNumber(input.expected_revision),"Article changed; reload the latest revision");
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline");
  if(typeof input.source_url!=="string")throw new DiaryError("invalid_image_url","Source URL required");
@@ -340,7 +319,7 @@ export async function importMediaFromUrl(db:DB,args:unknown){
  const {image}=await downloadImage(input.source_url,configuredImageHosts(configured));
  const asset=await createMedia(db,bucket(),id,image);
  // Inline imports only return Markdown; the caller saves a new revision explicitly.
- return commitUploadedMedia(db,input,id,req,asset,"import_media_from_url",asset.markdown);
+ return commitUploadedMedia(db,input,id,req,asset,"import_media_from_url");
 }
 
 
@@ -348,7 +327,7 @@ export async function importMediaFromUrl(db:DB,args:unknown){
  * when another request with the same idempotency key already won.
  */
 async function commitUploadedMedia(db:DB,input:HeroArgs,id:string,req:string,
- asset:Awaited<ReturnType<typeof createMedia>>,operation:"upload_chatgpt_image"|"import_media_from_url",inlineMarkdown:string){
+ asset:Awaited<ReturnType<typeof createMedia>>,operation:"upload_chatgpt_image"|"import_media_from_url"){
  try{
   let result:Record<string,unknown>;
   if(input.usage==="hero"){
@@ -356,7 +335,7 @@ async function commitUploadedMedia(db:DB,input:HeroArgs,id:string,req:string,
     {media_id:asset.id,media_url:asset.url});
   }else{
    result=await mutate(db,req,operation,
-    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:inlineMarkdown},[]);
+    {entry_id:id,usage:"inline",media_id:asset.id,media_url:asset.url,markdown:asset.markdown},[]);
   }
   if(result.media_id!==asset.id)await deleteMedia(db,bucket(),asset.id,id).catch(()=>{});
   return result;
@@ -372,9 +351,9 @@ async function commitUploadedMedia(db:DB,input:HeroArgs,id:string,req:string,
 export async function uploadChatGPTImage(db:DB,args:unknown){
  const input=args as HeroArgs;
  const id=entryId(input.entry_id),req=requestId(input.request_id);
- const replay=await priorMediaMutation(db,req,"upload_chatgpt_image");
+ const replay=await completedMutation(db,req,"upload_chatgpt_image","Request ID used for another operation");
  if(replay)return replay;
- await requireCurrentMediaRevision(db,id,input.expected_revision);
+ await requireCurrentRevision(db,id,revisionNumber(input.expected_revision),"Article changed; reload the latest revision");
  if(input.usage!=="hero"&&input.usage!=="inline")
   throw new DiaryError("invalid_input","Usage must be hero or inline");
  if(input.alt_text!==undefined && (typeof input.alt_text!=="string"||input.alt_text.length>200))
@@ -382,7 +361,7 @@ export async function uploadChatGPTImage(db:DB,args:unknown){
  const hosts=(env as unknown as {AI_DIARY_CHATGPT_FILE_HOSTS?:string}).AI_DIARY_CHATGPT_FILE_HOSTS;
  const image=await downloadChatGPTImage(input.file,hosts);
  const asset=await createMedia(db,bucket(),id,image);
- return commitUploadedMedia(db,input,id,req,asset,"upload_chatgpt_image",asset.markdown);
+ return commitUploadedMedia(db,input,id,req,asset,"upload_chatgpt_image");
 }
 
 export async function dispatch(db: DB, action: string, args: unknown) {

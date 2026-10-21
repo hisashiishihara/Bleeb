@@ -15,9 +15,6 @@ globalThis.__diaryTestEnv={AI_DIARY_OWNER_API_ENABLED:"true",AI_DIARY_OWNER_EMAI
 const store=await import("../lib/store.ts");
 const {resolveViewer}=await import("../lib/access.ts");
 const {readableEntry,readableEntries}=await import("../lib/reader-store.ts");
-const {registerMember,setMembership}=await import("../lib/membership.ts");
-const {POST:registration}=await import("../app/api/membership/route.ts");
-const {POST:admin}=await import("../app/api/owner/members/route.ts");
 const {POST:mcp}=await import("../app/mcp/route.ts");
 const {searchOwnerArchive,getOwnerArchiveEntry}=await import("../lib/owner-archive.ts");
 const {tools}=await import("../plugin/tool-definitions.ts");
@@ -37,6 +34,71 @@ let sequence=0;
 const req=()=>"access-test-"+(++sequence);
 const identity=id=>({id,email:id+"@example.invalid"});
 const ownerHeaders={"oai-authenticated-user-id":"verified-owner","oai-authenticated-user-email":"owner@example.invalid"};
+
+test("completed article requests replay before stale/content checks without repeating writes",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const createId=req(),updateId=req(),publishId=req(),withdrawId=req();
+  const saved=await store.saveDraft(db,{title:"Replay fixture",body_md:"first",request_id:createId});
+  assert.deepEqual(await store.saveDraft(db,{request_id:createId}),saved);
+  const args={entry_id:saved.entry_id,expected_revision:1,title:"Edited fixture",body_md:"second",request_id:updateId};
+  const edited=await store.updateEntry(db,args);
+  assert.deepEqual(await store.updateEntry(db,{...args,title:null}),edited);
+  const publication={entry_id:saved.entry_id,revision:2,visibility:"public",request_id:publishId};
+  const published=await store.publishEntry(db,publication);
+  const withdrawal={entry_id:saved.entry_id,request_id:withdrawId};
+  const withdrawn=await store.unpublishEntry(db,withdrawal);
+  assert.deepEqual(await store.publishEntry(db,publication),published);
+  assert.deepEqual(await store.unpublishEntry(db,withdrawal),withdrawn);
+  await assert.rejects(store.updateEntry(db,{...args,request_id:createId}),e=>e.code==="request_conflict"&&e.status===409);
+  const current=await store.getEntry(db,{entry_id:saved.entry_id});
+  assert.equal(current.entry.status,"draft");
+  assert.equal(current.entry.visibility,"owner");
+  assert.equal(current.revision.body_md,"second");
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM entry_revisions").get().n,2);
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM mutation_requests").get().n,4);
+ }finally{sqlite.close();}
+});
+
+test("concurrent revision winner survives while the losing batch rolls back",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const saved=await store.saveDraft(db,{title:"Race fixture",body_md:"first",request_id:req()});
+  const losingId=req();
+  const edit={entry_id:saved.entry_id,expected_revision:1,title:"Race fixture",body_md:"loser",request_id:losingId};
+  const raced={...db,async batch(statements){
+   await store.updateEntry(db,{...edit,body_md:"winner",request_id:req()});
+   return db.batch(statements);
+  }};
+  await assert.rejects(store.updateEntry(raced,edit),e=>e.code==="conflict"&&e.status===409);
+  const current=await store.getEntry(db,{entry_id:saved.entry_id});
+  assert.equal(current.entry.latest_revision,2);
+  assert.equal(current.revision.body_md,"winner");
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM mutation_requests WHERE request_id=?").get(losingId).n,0);
+  await assert.rejects(store.updateEntry(db,edit),e=>e.code==="stale_revision");
+ }finally{sqlite.close();}
+});
+
+test("concurrent request IDs replay a matching winner and reject another operation",async()=>{
+ for(const sameOperation of [true,false]){
+  const {db,sqlite}=fixture();
+  try{
+   const saved=await store.saveDraft(db,{title:"Existing fixture",body_md:"old",request_id:req()});
+   const id=req();let winner;
+   const raced={...db,async batch(statements){
+    winner=sameOperation
+     ? await store.saveDraft(db,{title:"Winner fixture",body_md:"winner",request_id:id})
+     : await store.unpublishEntry(db,{entry_id:saved.entry_id,request_id:id});
+    return db.batch(statements);
+   }};
+   const result=store.saveDraft(raced,{title:"Losing fixture",body_md:"loser",request_id:id});
+   if(sameOperation)assert.deepEqual(await result,winner);
+   else await assert.rejects(result,e=>e.code==="request_conflict"&&e.status===409);
+   assert.equal(sqlite.prepare("SELECT count(*) AS n FROM entries").get().n,sameOperation?2:1);
+   assert.equal(sqlite.prepare("SELECT count(*) AS n FROM entry_revisions WHERE body_md='loser'").get().n,0);
+  }finally{sqlite.close();}
+ }
+});
 
 test("owner read diagnostics return the exact runtime tools/list without writes",async()=>{
  const {sqlite}=fixture();
@@ -64,11 +126,11 @@ test("owner/public matrix blocks drafts, displays latest revisions, protects leg
  const {db,sqlite}=fixture();
  try {
   // Stored memberships are retained, but cannot grant access while suspended.
-  await registerMember(db,identity("paid"));
-  await setMembership(db,{user_id:"paid",tier:"paid",active:true,paid_active:true,paid_until:"2099-01-01T00:00:00Z"});
-  assert.deepEqual(await resolveViewer(db,identity("paid"),false),{owner:false,registered:false,paid:false});
-  const owner=await resolveViewer(db,identity("owner"),true);
-  const anon=await resolveViewer(db,null,false);
+  sqlite.exec("INSERT INTO members VALUES('paid','legacy','paid',1,1,'2099-01-01T00:00:00Z','legacy')");
+  assert.deepEqual(await resolveViewer(identity("paid"),false),{owner:false});
+  assert.equal(sqlite.prepare("SELECT tier FROM members WHERE user_id='paid'").get().tier,"paid");
+  const owner=await resolveViewer(identity("owner"),true);
+  const anon=await resolveViewer(null,false);
   const fakeClaims={owner:false,registered:true,paid:true};
   const entry=await store.saveDraft(db,{title:"PRIVATE DRAFT TITLE",body_md:"PRIVATE DRAFT BODY",request_id:req()});
   assert.equal(entry.visibility,"owner");
@@ -115,7 +177,7 @@ test("owner-only published article shows latest body and cover without anonymous
   const hero=await store.setHeroMedia(db,{entry_id:saved.entry_id,expected_revision:2,hero_media_id:id,alt_text:"private image",request_id:req()});
   assert.equal(hero.revision,3);
   assert.equal(hero.published_revision,1); // legacy pointer is preserved for audit
-  const owner={owner:true,registered:false,paid:false},anon={owner:false,registered:false,paid:false};
+  const owner={owner:true},anon={owner:false};
   const latest=await readableEntry(db,saved.slug,owner);
   assert.equal(latest.title,"Latest owner article");
   assert.equal(latest.body_md,"latest text");
@@ -130,14 +192,15 @@ test("owner-only published article shows latest body and cover without anonymous
  }finally{sqlite.close();}
 });
 
-test("membership endpoints are inert, even for authenticated owner; owner APIs reject cross-origin calls",async()=>{
+test("removed membership actions cannot write; owner APIs reject cross-origin calls",async()=>{
  const {db,sqlite}=fixture();
  try {
   const base="https://test.example.invalid";
   const request=(data,headers={})=>new Request(base+"/api/membership",{method:"POST",headers:{Origin:base,"Content-Type":"application/json",...headers},body:JSON.stringify(data)});
-  for(const headers of [{},ownerHeaders,{"oai-authenticated-user-id":"paid"}]){
-   assert.equal((await registration(request({action:"register"},headers))).status,404);
-   assert.equal((await admin(request({user_id:"paid",tier:"paid",active:true,paid_active:true},headers))).status,404);
+  for(const action of ["members","register_member","set_membership"]){
+   const context={params:Promise.resolve({action})};
+   assert.equal((await ownerApi(request({},ownerHeaders),context)).status,404);
+   assert.equal((await ownerApi(request({}),context)).status,403);
   }
   assert.equal((await db.prepare("SELECT count(*) AS n FROM members").first()).n,0);
   const context={params:Promise.resolve({action:"list_entries"})};
@@ -190,7 +253,7 @@ test("hero changes appear immediately on the latest published revision",async()=
   const entry=await store.saveDraft(db,{title:"Test hero",body_md:"Original",request_id:req()});
   await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,?,?,?,?)")
    .bind(mediaId,entry.entry_id,"entries/"+entry.entry_id+"/"+mediaId,"image/png",100,"fixture.png","now").run();
-  const anon={owner:false,registered:false,paid:false};
+  const anon={owner:false};
   await store.publishEntry(db,{entry_id:entry.entry_id,revision:1,visibility:"public",request_id:req()});
   const first=await store.setHeroMedia(db,{entry_id:entry.entry_id,expected_revision:1,hero_media_id:mediaId,alt_text:"illustration",request_id:req()});
   assert.equal(first.revision,2);
