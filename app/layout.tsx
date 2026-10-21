@@ -2,9 +2,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github.css";
-import { currentViewer } from "../lib/reader";
 
-// Header navigation must reflect the verified owner for each request.
+// The public site has no owner navigation; access starts at a separately bookmarked login URL.
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -15,15 +14,12 @@ export const metadata = {
 };
 
 export default async function RootLayout({children}:{children:ReactNode}) {
-  const isOwner = (await currentViewer()).owner;
   return (
     <html lang="ja"><body>
       <div className="shell">
         <header className="site-header">
           <a className="brand" href="/" aria-label="観測と思考 ホーム">観測と思考</a>
-          <nav aria-label="サイトメニュー"><a href="/">最新記事</a><a href="/archive">過去ログ</a><a href="/tags">タグ</a><a href="/archive#search">検索</a>{isOwner ?
-            <a href="/owner/archive">オーナー画面</a> :
-            <a href="/signin-with-chatgpt?return_to=%2Fowner%2Farchive" target="_top">オーナーログイン</a>}</nav>
+          <nav aria-label="サイトメニュー"><a href="/">最新記事</a><a href="/archive">過去ログ</a><a href="/tags">タグ</a><a href="/archive#search">検索</a></nav>
         </header>
         <main>{children}</main>
         <footer className="footer">

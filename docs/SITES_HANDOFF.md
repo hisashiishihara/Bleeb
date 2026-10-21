@@ -16,6 +16,7 @@ Bleeb source: [hisashiishihara/Bleeb](https://github.com/hisashiishihara/Bleeb).
 - First check CI and source revision. Do not reset databases, re-run completed migrations, delete private media or alter article states.
 - Preserve site URL, D1/R2 bindings, history, owner authentication and connected MCP tools.
 - Verify public article rendering; private 404s; owner-only browser/MCP; RSS/sitemap/robots; SEO indexing only where intended.
+- Check the unlinked `/login` entrance: signed-in owners reach `/owner/archive`, and unauthenticated visitors can start platform sign-in but cannot access owner resources. Keep the public header free of owner links.
 - Report Sites deployment ID separately from Git commit, and distinguish local/CI checks from real browser verification.
 
 [Current rollout](PUBLIC_ROLLOUT.md) · [Installation](GETTING_STARTED.md) · [Architecture](DESIGN.md)

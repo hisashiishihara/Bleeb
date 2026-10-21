@@ -155,6 +155,12 @@ The owner-only editor shows no registration link for drafts or owner-only articl
 
 In the owner's saved-article editor, click **「本文をコピー（書式付き）」**, then use **「note の新規投稿を開く」** to open note in another tab. These are separate operations: the link still works even if the browser blocks rich-text clipboard access. **Paste the article, set the title, check the formatting and publish manually.** If clipboard copying fails, the editor offers a manual Markdown copy fallback. Save any unsaved changes first. Images and videos are represented by placeholders and must be uploaded separately on note; complex Mermaid, chart and stock embeds may need manual adaptation.
 
+## Owner sign-in
+
+The public site header has **no owner or sign-in links**. Bookmark `https://blog.odorikani.net/login` to enter the owner area: an authenticated owner goes directly to `/owner/archive`; otherwise the page offers the platform's **ChatGPT sign-in** action.
+
+This URL is deliberately absent from navigation and the sitemap and is marked `noindex`. **Knowing the URL is not authorization**: owner routes and MCP actions continue to enforce trusted server-side identity checks.
+
 ## Browser editor
 
 - `/owner/new` — create a draft.

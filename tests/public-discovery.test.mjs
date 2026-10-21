@@ -67,8 +67,9 @@ test("global HTTP headers do not override public robots metadata",async()=>{
  const rules=await nextConfig.headers();
  const blocked=rules.filter(rule=>rule.headers.some(header=>header.key.toLowerCase()==="x-robots-tag"));
  assert.ok(blocked.length>0);
- for(const rule of blocked)assert.match(rule.source,/^\/(?:owner|api|mcp|account|media)(?:\/|$)/);
+ for(const rule of blocked)assert.match(rule.source,/^\/(?:owner|api|mcp|account|media)(?:\/|$)|^\/login$/);
  for(const prefix of ["/owner/","/api/","/media/"])assert.ok(blocked.some(rule=>rule.source.startsWith(prefix)));
  assert.ok(blocked.some(rule=>rule.source==="/mcp"));
+ assert.ok(blocked.some(rule=>rule.source==="/login"));
  assert.ok(rules.some(rule=>rule.headers.some(header=>header.key==="CDN-Cache-Control"&&header.value==="no-store")));
 });

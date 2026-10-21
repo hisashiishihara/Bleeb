@@ -23,14 +23,17 @@ test("reader-facing title is 観測と思考; Bleeb is the linked engine credit"
 
 });
 
-test("header navigation follows verified owner state instead of fixed login link",()=>{
+test("public navigation has no private links while owner sign-in remains available",()=>{
  const layout=read("app/layout.tsx");
+ const login=read("app/login/page.tsx");
  const reader=read("lib/reader.ts");
  assert.match(layout,/export const dynamic = "force-dynamic"/);
- assert.match(layout,/const isOwner = \(await currentViewer\(\)\)\.owner/);
- assert.match(layout,/\{isOwner \?/);
- assert.match(layout,/<a href="\/owner\/archive">オーナー画面<\/a>/);
- assert.match(layout,/href="\/signin-with-chatgpt\?return_to=%2Fowner%2Farchive"/);
+ for(const label of ["最新記事","過去ログ","タグ","検索"])assert.ok(layout.includes(label));
+ assert.doesNotMatch(layout,/オーナー画面|オーナーログイン|signin-with-chatgpt|<a href="\/owner\/archive"/);
+ assert.doesNotMatch(layout,/currentViewer\(\)/);
+ assert.match(login,/robots:\{index:false,follow:false\}/);
+ assert.match(login,/if\(\(await currentViewer\(\)\)\.owner\)redirect\("\/owner\/archive"\)/);
+ assert.match(login,/href="\/signin-with-chatgpt\?return_to=%2Fowner%2Farchive" target="_top"/);
  assert.match(reader,/requestIdentity\(new Headers\(await headers\(\)\)\)/);
  assert.match(reader,/ownerIdentity\(identity,config\.AI_DIARY_OWNER_EMAIL\)/);
  assert.match(reader,/AI_DIARY_OWNER_API_ENABLED==="true"/);
@@ -52,5 +55,6 @@ test("branding changes do not turn on public indexing or alter owner-only access
  assert.match(layout,/robots:\{\s*index:false,\s*follow:false\s*\}/);
  assert.match(post,/robots:\{index:false,follow:false\}/);
  assert.match(editor,/publish_entry/);
- assert.match(layout,/オーナーログイン/);
+ assert.doesNotMatch(layout,/オーナーログイン|オーナー画面/);
+ assert.match(read("app/login/page.tsx"),/オーナーログイン/);
 });

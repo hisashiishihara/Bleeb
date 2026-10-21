@@ -10,7 +10,7 @@ const config: NextConfig = {
         ]
       },
       // Public pages use their own robots metadata. Keep private surfaces blocked.
-      ...["/owner/:path*", "/api/:path*", "/mcp", "/mcp/:path*", "/account/:path*", "/media/:path*"].map(source => ({
+      ...["/owner/:path*", "/api/:path*", "/mcp", "/mcp/:path*", "/account/:path*", "/media/:path*", "/login"].map(source => ({
         source,
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }]
       }))
