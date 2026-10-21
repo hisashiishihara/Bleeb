@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { DiaryError } from "./input";
-import { mediaMaxBytes, matchesSignature, validMediaType, type MediaType, referencesMedia } from "./media-rules";
+import { mediaMaxBytes, matchesSignature, validMediaType, type MediaType, revisionReferencesMedia } from "./media-rules";
 
 export type MediaRow={
   id:string;entry_id:string;storage_key:string;content_type:MediaType;
@@ -41,5 +41,5 @@ export async function readableMedia(db:D1Database,id:string,owner:boolean):Promi
    "SELECT r.body_md,r.hero_media_id FROM entries e JOIN entry_revisions r ON r.entry_id=e.id AND r.revision=e.latest_revision "+
    "WHERE e.id=? AND e.status='published' AND e.visibility='public' AND e.published_revision IS NOT NULL"
  ).bind(asset.entry_id).first<{body_md:string;hero_media_id:string|null}>();
- return published&&(published.hero_media_id===id||referencesMedia(published.body_md,id))?asset:null;
+ return revisionReferencesMedia(published,id)?asset:null;
 }
