@@ -1,7 +1,7 @@
 name: Check Bleeb
 on:
   push:
-    branches: [main, 'build/**']
+    branches: [main, 'build/**', 'refactor/**']
   workflow_dispatch:
 jobs:
   test:
