@@ -22,6 +22,8 @@ Setup requires access to ChatGPT Sites, owner authentication, and an MCP connect
 
 ## Development checks
 
+For a new installation, follow [the staged private-Site setup and validation steps](docs/GETTING_STARTED.md#new-installation). Owner identity, runtime activation and the new Site's MCP connection require explicit verification. A successful deployment or an installed plugin alone does not prove article/media operations work. The current [validation record](docs/GETTING_STARTED.md#installation-validation-record-2026-10-22) distinguishes hosted checks from local tests and lists the remaining authentication handoff.
+
 Use the ChatGPT Work development environment and GitHub for source changes. GitHub Actions workflows are intentionally removed; no NUC, VPS or separate CI runner is required.
 
 ```sh
