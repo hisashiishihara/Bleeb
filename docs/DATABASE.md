@@ -54,7 +54,7 @@ Do not interpret `published_revision` as a frozen snapshot: the current reader j
 
 `lib/media-store.ts` writes bytes to R2, then registers the `media_assets` row in D1, attempting cleanup if the D1 insert fails. URL and ChatGPT-image upload paths perform subsequent revision/idempotency operations and attempt to remove unused assets after errors or duplicate submissions. Because D1 and R2 are separate stores, these steps are **not a single cross-store atomic transaction**; review failure and retry paths when changing the implementation.
 
-Public media reads in `lib/media-store.ts` check whether the media is referenced by the **current `latest_revision`** of a published, public article. `lib/media-deletion.ts` now checks the **current `latest_revision`** for published articles when protecting referenced media, matching the reader-visible revision. Regression tests cover an older `published_revision` pointer.
+Public media reads in `lib/media-store.ts` check whether the media is referenced by the **current `latest_revision`** of a published, public article. `lib/media-deletion.ts` atomically claims unreferenced media in D1 before removing R2 bytes. The `0005` triggers reject new article references or publication using a claimed asset; abandoned claims can be retried after 15 minutes. This cannot make D1 and R2 one transaction, so unconfirmed R2 errors retain a claim until safe retry. Regression tests cover an older `published_revision` pointer.
 
 ## Migration order
 
@@ -65,6 +65,7 @@ Apply the files only in their designed order on a **new test database**:
 3. `0002_article_access.sql` — visibility and legacy members
 4. `0003_media.sql` — media metadata
 5. `0004_hero_media.sql` — per-revision hero fields
+6. `0005_media_deletion_fence.sql` — in-progress R2 deletion claims and D1 triggers that prevent new media references
 
 The `ALTER TABLE` migrations are not meant to be rerun blindly. **Do not reapply migrations, reseed or recreate production D1** as part of documentation or source deployment.
 
