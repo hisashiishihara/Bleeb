@@ -34,7 +34,7 @@ export async function createMedia(db:D1Database,store:R2Bucket,entryId:string,fi
 }
 export async function readableMedia(db:D1Database,id:string,owner:boolean):Promise<MediaRow|null> {
  const asset=await db.prepare("SELECT * FROM media_assets WHERE id=?").bind(id).first<MediaRow>();
- if(!asset)return null;
+ if(!asset || (asset as MediaRow & {deletion_claim?:string|null}).deletion_claim)return null;
  if(owner)return asset;
  // Permit public media only when the current visible revision references it.
  const published=await db.prepare(

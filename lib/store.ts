@@ -51,6 +51,7 @@ async function mutate<T>(db: DB, id: string, operation: string, response: T, wri
   } catch (error) {
     const concurrent = await completedMutation<T>(db, id, operation);
     if (concurrent) return concurrent;
+    if (String(error).includes("media_deletion_in_progress")) throw new DiaryError("media_deletion_in_progress","Media deletion is in progress",409);
     if (String(error).includes("UNIQUE") || String(error).includes("FOREIGN KEY")) {
       throw new DiaryError("conflict", "Concurrent update or duplicate slug", 409);
     }
@@ -66,6 +67,27 @@ async function completedMutation<T=Record<string,unknown>>(db:DB,id:string,opera
  if(existing.operation!==operation)
   throw new DiaryError("request_conflict",message,409);
  return JSON.parse(existing.response_json) as T;
+}
+
+/** Conditional D1 update and its idempotency receipt commit together. */
+async function guardedMutation<T>(db:DB,id:string,operation:string,response:T,write:D1PreparedStatement,stale:string):Promise<T>{
+ const previous=await completedMutation<T>(db,id,operation);
+ if(previous)return previous;
+ const receipt=db.prepare("INSERT INTO mutation_requests(request_id,operation,response_json,created_at) "+
+   "SELECT ?,?,?,? WHERE changes()=1").bind(id,operation,JSON.stringify(response),NOW());
+ try{await db.batch([write,receipt]);}
+ catch(error){
+  const concurrent=await completedMutation<T>(db,id,operation);
+  if(concurrent)return concurrent;
+  if(String(error).includes("media_deletion_in_progress"))
+   throw new DiaryError("media_deletion_in_progress","Media deletion is in progress",409);
+  if(String(error).includes("UNIQUE"))
+   throw new DiaryError("conflict","Concurrent update or request collision",409);
+  throw error;
+ }
+ const committed=await completedMutation<T>(db,id,operation);
+ if(!committed)throw new DiaryError("stale_revision",stale,409);
+ return committed;
 }
 
 async function requireEntry(db: DB, id: string): Promise<Entry> {
@@ -159,10 +181,11 @@ export async function publishEntry(db: DB, args: unknown) {
   // Omitted audience preserves current scope; old clients never broaden it.
   const audience = visibility(a.visibility === undefined ? (entry.visibility === "public" ? "public" : "owner") : a.visibility);
   const response = { entry_id: id, slug: entry.slug, status: "published", revision: rev, visibility: audience, public_path: "/posts/" + entry.slug };
-  return mutate(db, req, "publish_entry", response, [
-    db.prepare("UPDATE entries SET status='published',visibility=?,published_revision=?,published_at=?,updated_at=? WHERE id=?")
-      .bind(audience, rev, now, now, id)
-  ]);
+  return guardedMutation(db,req,"publish_entry",response,
+    db.prepare("UPDATE entries SET status='published',visibility=?,published_revision=?,published_at=?,updated_at=? "+
+      "WHERE id=? AND latest_revision=?")
+      .bind(audience,rev,now,now,id,rev),
+    "Article changed while publishing; reload the latest revision");
 }
 
 /** Permanently remove a draft and its owned media. Never operates on published
@@ -277,7 +300,7 @@ async function newHeroRevision(db:DB,input:HeroArgs,action:string,mediaResult?:R
  const heroId=input.hero_media_id;
  if(heroId!==null){
   if(typeof heroId!=="string"||!MEDIA_ID_RE.test(heroId))throw new DiaryError("invalid_media_id","Invalid hero image ID");
-  const asset=await db.prepare("SELECT id FROM media_assets WHERE id=? AND entry_id=? AND content_type LIKE 'image/%'")
+  const asset=await db.prepare("SELECT id FROM media_assets WHERE id=? AND entry_id=? AND content_type LIKE 'image/%' AND deletion_claim IS NULL")
    .bind(heroId,id).first<{id:string}>();
   if(!asset)throw new DiaryError("not_found","Hero image must belong to the selected article",404);
  }
