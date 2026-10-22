@@ -54,7 +54,7 @@ test("only publicly indexable routes opt in, owner pages stay blocked",()=>{
  const root=read("app/layout.tsx");
  const home=read("app/page.tsx");
  const post=read("app/posts/[slug]/page.tsx");
- assert.match(root,/robots:\{ index:false, follow:false \}/);
+ assert.match(root,/robots:\{\s*index:false,\s*follow:false\s*\}/);
  assert.match(root,/application\/rss\+xml/);
  assert.match(home,/robots:\{index:true,follow:true\}/);
  assert.match(post,/item\.visibility==="public"\?\{index:true,follow:true\}:\{index:false,follow:false\}/);

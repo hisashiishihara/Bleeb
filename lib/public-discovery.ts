@@ -8,6 +8,7 @@ export const SITE_TITLE="My Blog";
 export const SITE_DESCRIPTION="A blog powered by Bleeb.";
 export function siteMetadata(config:{SITE_ORIGIN?:string;SITE_TITLE?:string;SITE_DESCRIPTION?:string}) {
  const raw=config.SITE_ORIGIN?.trim()||SITE_ORIGIN;
+ if(/[\u0000-\u0020\u007f\\]/.test(raw))throw new Error("SITE_ORIGIN must be a bare HTTPS origin");
  let parsed:URL;
  try { parsed=new URL(raw); } catch { throw new Error("SITE_ORIGIN must be an HTTPS origin"); }
  if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.pathname!=="/"||parsed.search||parsed.hash)
@@ -22,6 +23,7 @@ export function siteBranding(config:{SITE_TITLE?:string;SITE_DESCRIPTION?:string
  const contactRaw=config.SITE_CONTACT_URL?.trim();
  let contactUrl:string|null=null;
  if(contactRaw){
+  if(/[\u0000-\u0020\u007f\\]/.test(contactRaw))throw new Error("SITE_CONTACT_URL must be HTTPS");
   let url:URL;
   try{url=new URL(contactRaw);}catch{throw new Error("SITE_CONTACT_URL must be HTTPS");}
   if(url.protocol!=="https:"||url.username||url.password)throw new Error("SITE_CONTACT_URL must be HTTPS");
