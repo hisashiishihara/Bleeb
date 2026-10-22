@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { siteBranding } from "../lib/public-discovery";
 import { database } from "../lib/store";
 import { readableRecentFull } from "../lib/reader-store";
 import { currentViewer } from "../lib/reader";
@@ -16,12 +18,13 @@ const tags=(value:string):string[]=>{
 };
 
 export default async function Home(){
+ const site=siteBranding(env as {SITE_TITLE?:string;SITE_DESCRIPTION?:string;SITE_EYEBROW?:string});
  const posts=await readableRecentFull(database(),await currentViewer(),3);
  return <div className="home journal-home">
    <section className="intro journal-intro">
-     <p className="eyebrow">OBSERVATION / THOUGHT</p>
-     <h1>観測と思考</h1>
-     <p className="intro-copy">技術の変化を読み、企業や市場の未来を予測する個人の blog</p>
+     <p className="eyebrow">{site.eyebrow}</p>
+     <h1>{site.title}</h1>
+     <p className="intro-copy">{site.description}</p>
    </section>
    <section aria-label="最近の記事">
      <div className="section-head"><h2>最近の記事</h2><span>最新3件を紹介</span></div>

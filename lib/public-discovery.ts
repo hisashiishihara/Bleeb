@@ -3,9 +3,9 @@ export type DiscoveryEntry={
  slug:string; title:string; summary:string|null;
  published_at:string; updated_at:string;
 };
-export const SITE_ORIGIN="https://blog.odorikani.net";
-export const SITE_TITLE="観測と思考";
-export const SITE_DESCRIPTION="技術の変化を読み、企業や市場の未来を予測する個人の blog";
+export const SITE_ORIGIN="https://example.com";
+export const SITE_TITLE="My Blog";
+export const SITE_DESCRIPTION="A blog powered by Bleeb.";
 export function siteMetadata(config:{SITE_ORIGIN?:string;SITE_TITLE?:string;SITE_DESCRIPTION?:string}) {
  const raw=config.SITE_ORIGIN?.trim()||SITE_ORIGIN;
  let parsed:URL;
@@ -13,6 +13,21 @@ export function siteMetadata(config:{SITE_ORIGIN?:string;SITE_TITLE?:string;SITE
  if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.pathname!=="/"||parsed.search||parsed.hash)
   throw new Error("SITE_ORIGIN must be a bare HTTPS origin");
  return {origin:parsed.origin,title:config.SITE_TITLE?.trim()||SITE_TITLE,description:config.SITE_DESCRIPTION?.trim()||SITE_DESCRIPTION};
+}
+/** Configure visible branding separately from reader access and RSS discovery. */
+export function siteBranding(config:{SITE_TITLE?:string;SITE_DESCRIPTION?:string;SITE_EYEBROW?:string;SITE_CONTACT_URL?:string}) {
+ const title=config.SITE_TITLE?.trim()||SITE_TITLE;
+ const description=config.SITE_DESCRIPTION?.trim()||SITE_DESCRIPTION;
+ const eyebrow=config.SITE_EYEBROW?.trim()||"BLEEB / BLOG";
+ const contactRaw=config.SITE_CONTACT_URL?.trim();
+ let contactUrl:string|null=null;
+ if(contactRaw){
+  let url:URL;
+  try{url=new URL(contactRaw);}catch{throw new Error("SITE_CONTACT_URL must be HTTPS");}
+  if(url.protocol!=="https:"||url.username||url.password)throw new Error("SITE_CONTACT_URL must be HTTPS");
+  contactUrl=url.toString();
+ }
+ return {title,description,eyebrow,contactUrl};
 }
 export async function publicDiscoveryEntries(db:D1Database):Promise<DiscoveryEntry[]> {
  const rows=await db.prepare(
