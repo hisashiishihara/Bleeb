@@ -1,6 +1,6 @@
 # Database design (current D1 schema)
 
-This document describes the **implemented schema**, reconstructed from `drizzle/0000_initial.sql` through `0004_hero_media.sql`. Those migration files remain the authoritative DDL. `docs/DESIGN.md` contains an earlier illustrative proposal, not a complete current schema. No migration should be inferred from this document.
+This document describes the **implemented schema**, reconstructed from `drizzle/0000_initial.sql` through `0005_media_deletion_fence.sql`. Those migration files remain the authoritative DDL. `docs/DESIGN.md` contains an earlier illustrative proposal, not a complete current schema. No migration should be inferred from this document.
 
 ## Storage and ownership
 

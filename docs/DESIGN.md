@@ -22,7 +22,7 @@ ChatGPT conversation → owner-authenticated MCP tools
 
 D1 stores entries, immutable revisions, mutation deduplication and media metadata. R2 stores file bytes. The **latest revision** of an already-published article is reader-visible within its current audience; `published_revision` remains a legacy publication marker. Drafts are private. Active article audiences are **owner** and **public**; membership and payments are disabled.
 
-Every write must verify **trusted owner identity** before touching data. Anonymous readers must not access drafts, owner routes, private media or mutation endpoints. Site sharing is separate from the article's visibility. Media deletion must protect assets referenced by the latest visible revision.
+Every write must verify **trusted owner identity** before touching data. Anonymous readers must not access drafts, owner routes, private media or mutation endpoints. Site sharing is separate from the article's visibility. Media deletion must protect assets referenced by the latest visible revision. Migration `0005_media_deletion_fence.sql` adds a durable D1 deletion claim and triggers that block new references during R2 removal. Claims older than 15 minutes may be reclaimed on retry.
 
 ## Operations
 
