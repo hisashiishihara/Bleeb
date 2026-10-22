@@ -11,7 +11,7 @@ const key="entries/"+entryId+"/"+mediaId;
 function fixture(){
  const sqlite=new DatabaseSync(":memory:");
  sqlite.exec("PRAGMA foreign_keys=ON");
- for(const n of ["0000_initial","0002_article_access","0003_media","0004_hero_media"])
+ for(const n of ["0000_initial","0002_article_access","0003_media","0004_hero_media","0005_media_deletion_fence"])
    sqlite.exec(readFileSync(new URL("../drizzle/"+n+".sql",import.meta.url),"utf8"));
  sqlite.prepare("INSERT INTO entries(id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at) VALUES(?,?,'published','owner',2,1,'now','now')")
   .run(entryId,"fixture");
@@ -89,5 +89,56 @@ test("invalid or mismatched IDs cannot delete or probe another article",async()=
   await assert.rejects(()=>deleteMedia(f.db,f.r2,mediaId,otherId),e=>e.status===404);
   assert.equal(f.bytes.has(key),true);
   assert.deepEqual(f.events,[]);
+ }finally{f.sqlite.close();}
+});
+
+test("R2 deletion claim blocks a concurrently saved reference",async()=>{
+ const f=fixture();
+ try{
+  const originalDelete=f.r2.delete.bind(f.r2);
+  f.r2.delete=async name=>{
+   const claim=f.sqlite.prepare("SELECT deletion_claim FROM media_assets WHERE id=?").get(mediaId);
+   assert.equal(typeof claim.deletion_claim,"string");
+   assert.throws(()=>{
+    f.sqlite.exec("BEGIN");
+    try{
+     f.sqlite.prepare("UPDATE entries SET latest_revision=3 WHERE id=?").run(entryId);
+     f.sqlite.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at) VALUES(?,3,'concurrent',?,NULL,'[]','now')")
+       .run(entryId,"![new](/media/"+mediaId+")");
+    }finally{f.sqlite.exec("ROLLBACK");}
+   },/media_deletion_in_progress/);
+   await originalDelete(name);
+  };
+  await deleteMedia(f.db,f.r2,mediaId,entryId);
+  assert.equal(f.sqlite.prepare("SELECT latest_revision FROM entries WHERE id=?").get(entryId).latest_revision,2);
+  assert.equal(f.sqlite.prepare("SELECT count(*) AS n FROM media_assets").get().n,0);
+ }finally{f.sqlite.close();}
+});
+
+test("publication cannot begin while R2 deletion is in flight",async()=>{
+ const f=fixture();
+ try{
+  f.sqlite.prepare("UPDATE entries SET status='draft',visibility='owner',published_revision=NULL WHERE id=?").run(entryId);
+  f.sqlite.prepare("UPDATE entry_revisions SET body_md=? WHERE entry_id=? AND revision=2")
+   .run("![to be published](/media/"+mediaId+")",entryId);
+  const originalDelete=f.r2.delete.bind(f.r2);
+  f.r2.delete=async name=>{
+   assert.throws(
+    ()=>f.sqlite.prepare("UPDATE entries SET status='published',published_revision=2 WHERE id=?").run(entryId),
+    /media_deletion_in_progress/
+   );
+   await originalDelete(name);
+  };
+  await deleteMedia(f.db,f.r2,mediaId,entryId);
+  assert.equal(f.sqlite.prepare("SELECT status FROM entries WHERE id=?").get(entryId).status,"draft");
+ }finally{f.sqlite.close();}
+});
+
+test("expired interrupted deletion claims can be reclaimed",async()=>{
+ const f=fixture();
+ try{
+  f.sqlite.prepare("UPDATE media_assets SET deletion_claim='abandoned',deletion_claimed_at=unixepoch('now')-1000 WHERE id=?").run(mediaId);
+  assert.equal((await deleteMedia(f.db,f.r2,mediaId,entryId)).deleted,true);
+  assert.equal(f.sqlite.prepare("SELECT count(*) AS n FROM media_assets").get().n,0);
  }finally{f.sqlite.close();}
 });

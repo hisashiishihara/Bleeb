@@ -22,7 +22,7 @@ const {POST:ownerApi}=await import("../app/api/owner/[action]/route.ts");
 const {GET:noteFile}=await import("../app/owner/archive/[id]/note-copy/route.ts");
 function fixture(){
   const sqlite=new DatabaseSync(":memory:");
-  for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql","0003_media.sql","0004_hero_media.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
+  for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql","0003_media.sql","0004_hero_media.sql","0005_media_deletion_fence.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
   const db={prepare(sql){
     const bind=values=>({bind(...v){return bind(v);},async first(){return sqlite.prepare(sql).get(...values)??null;},async all(){return {results:sqlite.prepare(sql).all(...values)};},async run(){return sqlite.prepare(sql).run(...values);}});
     return bind([]);
@@ -546,4 +546,27 @@ test("R2 removal failures prevent D1 draft deletion; retries safely remove it",a
   assert.equal(result.deleted,true);
   assert.equal(keys.size,0);
  }finally{globalThis.__diaryTestEnv.MEDIA=previous;sqlite.close();}
+});
+
+test("publishing cannot succeed after a newer revision wins the race",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const article=await store.saveDraft(db,{title:"Publish race",body_md:"Revision one",request_id:req()});
+  const publishId=req();
+  const raced={...db,async batch(statements){
+   await store.updateEntry(db,{entry_id:article.entry_id,expected_revision:1,title:"Revision two",body_md:"Newer body",request_id:req()});
+   return db.batch(statements);
+  }};
+  await assert.rejects(
+   store.publishEntry(raced,{entry_id:article.entry_id,revision:1,visibility:"public",request_id:publishId}),
+   e=>e.code==="stale_revision"&&e.status===409
+  );
+  const saved=await store.getEntry(db,{entry_id:article.entry_id});
+  assert.equal(saved.entry.status,"draft");
+  assert.equal(saved.entry.latest_revision,2);
+  assert.equal(saved.entry.published_revision,null);
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM mutation_requests WHERE request_id=?").get(publishId).n,0);
+  const success=await store.publishEntry(db,{entry_id:article.entry_id,revision:2,visibility:"public",request_id:req()});
+  assert.equal(success.revision,2);
+ }finally{sqlite.close();}
 });
