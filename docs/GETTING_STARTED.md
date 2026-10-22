@@ -44,7 +44,7 @@ Do NOT touch my existing blog, Site, articles or storage.
 
 ## Existing Site updates
 
-For `観測と思考` (`https://blog.odorikani.net`), **deploy to the existing Site** rather than following the new-install steps. Never re-run existing migrations or change D1/R2, visibility, owner secrets or MCP connections without explicit approval. See [deployment handoff](SITES_HANDOFF.md).
+For `観測と思考` (`https://blog.odorikani.net`), **deploy to the existing Site** rather than following the new-install steps. Before ANY future production code deployment from this refactor, explicitly set `SITE_ORIGIN=https://blog.odorikani.net`, `SITE_TITLE=観測と思考`, `SITE_DESCRIPTION=技術の変化を読み、企業や市場の未来を予測する個人の blog`, and `SITE_EYEBROW=OBSERVATION / THOUGHT`; otherwise generic defaults will replace the visible branding. About and Privacy are now generic starter pages: preserve the existing production copy through a separate site-specific customization before deploying this change to production. Never re-run existing migrations or change D1/R2, visibility, owner secrets or MCP connections without explicit approval. See [deployment handoff](SITES_HANDOFF.md).
 
 ## Development checks
 
