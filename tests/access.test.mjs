@@ -22,7 +22,7 @@ const {POST:ownerApi}=await import("../app/api/owner/[action]/route.ts");
 const {GET:noteFile}=await import("../app/owner/archive/[id]/note-copy/route.ts");
 function fixture(){
   const sqlite=new DatabaseSync(":memory:");
-  for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql","0003_media.sql","0004_hero_media.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
+  for(const file of ["0000_initial.sql","0001_referrers.sql","0002_article_access.sql","0003_media.sql","0004_hero_media.sql","0005_media_deletion_fence.sql"]) sqlite.exec(readFileSync(new URL("../drizzle/"+file,import.meta.url),"utf8"));
   const db={prepare(sql){
     const bind=values=>({bind(...v){return bind(v);},async first(){return sqlite.prepare(sql).get(...values)??null;},async all(){return {results:sqlite.prepare(sql).all(...values)};},async run(){return sqlite.prepare(sql).run(...values);}});
     return bind([]);
@@ -546,4 +546,43 @@ test("R2 removal failures prevent D1 draft deletion; retries safely remove it",a
   assert.equal(result.deleted,true);
   assert.equal(keys.size,0);
  }finally{globalThis.__diaryTestEnv.MEDIA=previous;sqlite.close();}
+});
+
+test("publishing cannot succeed after a newer revision wins the race",async()=>{
+ const {db,sqlite}=fixture();
+ try{
+  const article=await store.saveDraft(db,{title:"Publish race",body_md:"Revision one",request_id:req()});
+  const publishId=req();
+  const raced={...db,async batch(statements){
+   await store.updateEntry(db,{entry_id:article.entry_id,expected_revision:1,title:"Revision two",body_md:"Newer body",request_id:req()});
+   return db.batch(statements);
+  }};
+  await assert.rejects(
+   store.publishEntry(raced,{entry_id:article.entry_id,revision:1,visibility:"public",request_id:publishId}),
+   e=>e.code==="stale_revision"&&e.status===409
+  );
+  const saved=await store.getEntry(db,{entry_id:article.entry_id});
+  assert.equal(saved.entry.status,"draft");
+  assert.equal(saved.entry.latest_revision,2);
+  assert.equal(saved.entry.published_revision,null);
+  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM mutation_requests WHERE request_id=?").get(publishId).n,0);
+  const success=await store.publishEntry(db,{entry_id:article.entry_id,revision:2,visibility:"public",request_id:req()});
+  assert.equal(success.revision,2);
+ }finally{sqlite.close();}
+});
+
+
+test("a draft with deleted inline and hero media can be repaired in one body edit",async()=>{
+ const {db,sqlite}=fixture();const previous=globalThis.__diaryTestEnv.MEDIA;
+ try{
+  globalThis.__diaryTestEnv.MEDIA={async delete(){},async head(){return null;}};
+  const media="850e8400-e29b-41d4-a716-446655440000";
+  const e=await store.saveDraft(db,{title:"Repair draft",body_md:"![old](/media/"+media+")",request_id:req()});
+  await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,'image/png',1,'old.png','now')").bind(media,e.entry_id,'entries/'+e.entry_id+'/'+media).run();
+  await store.setHeroMedia(db,{entry_id:e.entry_id,expected_revision:1,hero_media_id:media,request_id:req()});
+  await store.dispatch(db,'delete_media',{media_id:media,entry_id:e.entry_id});
+  await store.updateEntry(db,{entry_id:e.entry_id,expected_revision:2,title:"Repair draft",body_md:"Reference removed",request_id:req()});
+  const repaired=await store.getEntry(db,{entry_id:e.entry_id});assert.equal(repaired.revision.hero_media_id,null);
+  await store.publishEntry(db,{entry_id:e.entry_id,revision:3,request_id:req()});
+ }finally{sqlite.close();globalThis.__diaryTestEnv.MEDIA=previous;}
 });

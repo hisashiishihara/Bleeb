@@ -157,7 +157,7 @@ In the owner's saved-article editor, click **「本文をコピー（書式付�
 
 ## Owner sign-in
 
-The public site header has **no owner or sign-in links**. Bookmark `https://blog.odorikani.net/login` to enter the owner area: an authenticated owner goes directly to `/owner/archive`; otherwise the page offers the platform's **ChatGPT sign-in** action.
+The public site header has **no owner or sign-in links**. For your own installation, access **`https://YOUR-SITE-DOMAIN/login`** (the **`/login`** path) and choose the platform's **ChatGPT sign-in** action. For the reference blog only, the address is `https://blog.odorikani.net/login`. An authenticated, authorized owner goes directly to `/owner/archive`.
 
 This URL is deliberately absent from navigation and the sitemap and is marked `noindex`. **Knowing the URL is not authorization**: owner routes and MCP actions continue to enforce trusted server-side identity checks.
 

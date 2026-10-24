@@ -27,10 +27,9 @@ a file referenced by the latest reader-visible revision of a published article, 
 If the owner wants to remove a file in an existing published article, first
 save a new revision without the Markdown reference (it becomes reader-visible immediately on already-published articles). Explicitly publish again only to change publication state or audience. Then perform file deletion.
 
-The R2 operation precedes D1 deletion so errors never discard the only stored
-object key before bytes are removed. A failed delete leaves D1 metadata intact
+Before R2 removal, D1 stores a permanent `media_deletions` intent that fences the canonical media ID and key, including cross-article references. Draft deletion uses this same path. The intent survives metadata/article deletion and is never unlocked by elapsed time or an R2 error. Only metadata cleanup follows R2 removal. A failed delete leaves D1 metadata intact
 for a retry. The R2 object is checked absent after `delete` before the metadata
-record is removed. If it was already deleted, a retry completes the cleanup.
+record is removed. If it was already deleted, a retry completes the cleanup. Retries need no waiting period and may overlap safely because none can reopen references or reuse the key. A failed/unknown DELETE may still complete late, so HEAD seeing bytes never cancels the intent. Old revisions remain readable to the owner, but cannot be restored/published with a deleted-media reference; remove the reference or upload a new asset. Saving a body edit clears a hero that already has a deletion intent, so a draft containing the same deleted asset in both body and hero can be repaired in one edit.
 
 ## One-off cleanup
 
