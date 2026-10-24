@@ -98,7 +98,7 @@ of the article's text area:
 
 Supported values are whole percentages from `1%` through `100%`.
 A normal Markdown image without the `"width=...%"` title is unchanged.
-The width is responsive: images do not overflow their container.
+Images with an explicit width are automatically centered in the article. The width is responsive: images do not overflow their container.
 Ordinary image titles remain standard tooltips; arbitrary CSS, pixel widths,
 raw HTML, and width options for the `video:` extension are not supported.
 The image bytes in R2 are not resized or recompressed.

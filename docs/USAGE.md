@@ -129,8 +129,7 @@ Markdown image title with `width=75%`:
 ```
 
 This changes only the image's display width, not the original file in R2.
-Percentages from 1% to 100% are accepted, and ordinary images without this
-option remain unchanged. Images stay within the reading area's width.
+Percentages from 1% to 100% are accepted. Images with a width directive are automatically centered, while ordinary images without this option remain unchanged. Images stay within the reading area's width.
 
 
 Upload your image or video through ChatGPT or the owner editor. Then insert the media URL returned by Bleeb:

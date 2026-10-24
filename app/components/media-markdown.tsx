@@ -9,7 +9,7 @@ import {ArticleToc} from "./article-toc";
 import {MermaidDiagram} from "./mermaid-diagram";
 import {ArticleChart,StockEmbed,TweetEmbed,YouTubeEmbed} from "./article-embeds";
 import { MEDIA_ID_RE } from "../../lib/media-rules";
-import { imageWidthPercentage } from "../../lib/image-width";
+import { imageWidthPercentage, imageWidthStyle } from "../../lib/image-width";
 
 export function MediaMarkdown({body}:{body:string}){
  return <><ArticleToc body={body}/><ReactMarkdown skipHtml remarkPlugins={[remarkGfm,remarkMath]} rehypePlugins={[rehypeKatex,[rehypeHighlight,{detect:false,plainText:["mermaid","chart","stock","x","youtube"]}],rehypeSlug]} components={{
@@ -38,7 +38,7 @@ export function MediaMarkdown({body}:{body:string}){
    const width=imageWidthPercentage(title);
    return <img src={src} alt={alt||""} loading="lazy"
      title={width===null?title:undefined}
-     style={width===null?undefined:{width:width+"%",maxWidth:"100%",height:"auto"}}/>;
+     style={imageWidthStyle(width)}/>;
   }
  }}>{body}</ReactMarkdown></>;
 }

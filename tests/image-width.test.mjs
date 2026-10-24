@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {unified} from "unified";
 import remarkParse from "remark-parse";
-import {imageWidthPercentage} from "../lib/image-width.ts";
+import {imageWidthPercentage,imageWidthStyle} from "../lib/image-width.ts";
 
 test("Markdown image titles parse as width directives",()=>{
  const tree=unified().use(remarkParse).parse('![Screen](/media/363cabc5-e00a-4bed-94c4-e7aa9dbfe181 "width=75%")');
@@ -25,4 +25,13 @@ test("ordinary image titles remain ordinary Markdown titles",()=>{
  const title=tree.children[0].children[0].title;
  assert.equal(title,"a helpful tooltip");
  assert.equal(imageWidthPercentage(title),null);
+});
+
+test("width-specified images are centered without affecting normal images",()=>{
+ assert.deepEqual(imageWidthStyle(imageWidthPercentage("width=75%")),
+  {width:"75%",maxWidth:"100%",height:"auto",display:"block",marginInline:"auto"});
+ assert.deepEqual(imageWidthStyle(imageWidthPercentage("width=100%")),
+  {width:"100%",maxWidth:"100%",height:"auto",display:"block",marginInline:"auto"});
+ assert.equal(imageWidthStyle(imageWidthPercentage(undefined)),undefined);
+ assert.equal(imageWidthStyle(imageWidthPercentage("ordinary tooltip")),undefined);
 });

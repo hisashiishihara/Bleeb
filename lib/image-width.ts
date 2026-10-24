@@ -6,3 +6,10 @@ export function imageWidthPercentage(title:string|undefined):number|null {
  const match=/^width=(100|[1-9][0-9]?)%$/.exec(title);
  return match?Number(match[1]):null;
 }
+
+/** Width directives center their images; plain Markdown images remain unchanged. */
+export function imageWidthStyle(width:number|null) {
+ return width===null?undefined:{
+  width:width+"%",maxWidth:"100%",height:"auto",display:"block" as const,marginInline:"auto"
+ };
+}
