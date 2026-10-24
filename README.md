@@ -14,7 +14,7 @@ Bleeb is a tiny, open-source blogging engine built specifically for **ChatGPT Si
 
 [Installation](docs/GETTING_STARTED.md) · [Usage](docs/USAGE.md) · [Roadmap](docs/ROADMAP.md) · [Architecture](docs/DESIGN.md)
 
-Setup requires access to ChatGPT Sites, owner authentication, and an MCP connection; it is not a one-click install. **Browser login:** visit `https://YOUR-SITE-DOMAIN/login` on your Bleeb Site and sign in through ChatGPT; no login link appears in the public header. Validate private-content access controls before sharing a Site publicly.
+Setup requires access to ChatGPT Sites, owner authentication, and an MCP connection; it is not a one-click install. **Browser login:** visit `https://YOUR-SITE-DOMAIN/login` on your Bleeb Site and sign in through ChatGPT; no login link appears in the public header. Only the authenticated, configured owner can access management pages when the owner API is enabled. Validate private-content access controls before sharing a Site publicly.
 
 **Pricing note:** ChatGPT Plus/Pro subscriptions are paid. Hosting availability, Codex usage limits, traffic, and storage limits are subject to current platform terms. Custom domains or other external services may incur fees.
 

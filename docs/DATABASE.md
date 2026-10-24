@@ -54,18 +54,22 @@ Do not interpret `published_revision` as a frozen snapshot: the current reader j
 
 `lib/media-store.ts` writes bytes to R2, then registers the `media_assets` row in D1, attempting cleanup if the D1 insert fails. URL and ChatGPT-image upload paths perform subsequent revision/idempotency operations and attempt to remove unused assets after errors or duplicate submissions. Because D1 and R2 are separate stores, these steps are **not a single cross-store atomic transaction**; review failure and retry paths when changing the implementation.
 
-Public media reads in `lib/media-store.ts` check whether the media is referenced by the **current `latest_revision`** of a published, public article. `lib/media-deletion.ts` atomically claims unreferenced media in D1 before removing R2 bytes. The `0005` triggers reject new article references or publication using a claimed asset; abandoned claims can be retried after 15 minutes. This cannot make D1 and R2 one transaction, so unconfirmed R2 errors retain a claim until safe retry. Regression tests cover an older `published_revision` pointer.
+Public media reads in `lib/media-store.ts` check the **current `latest_revision`** of a published, public article. Before any R2 deletion, `lib/media-deletion.ts` atomically records an irreversible intent in `media_deletions`, only if no published article currently references the asset. The reference test is the same conservative canonical `/media/<UUID>` substring or exact hero ID used by `revisionReferencesMedia`; cross-article references are protected too.
+
+The `0005` triggers reject new/updated references and publication using an intent's media ID. Intents survive metadata and draft deletion. They have **no expiry, owner handoff or cancellation**, even if HEAD still sees an object after a DELETE failure. An earlier unknown DELETE can complete late. Retries may run concurrently: each only deletes the same immutable R2 key, verifies absence, and removes the asset metadata. The permanent intent keeps old draft/history references from being republished after cleanup. Upload the file again with a new UUID to use it again.
+
+This is not a D1/R2 transaction. Interrupted cleanup can leave fenced metadata without bytes; retry the same deletion to finish. Never clear intents, reuse their keys, or restore an old D1 backup alone after irreversible R2 deletion.
 
 ## Migration order
 
-Apply the files only in their designed order on a **new test database**:
+For a new installation, apply all files in order. For an existing Site, apply only migrations not already recorded by the hosting migration ledger:
 
 1. `0000_initial.sql` — entries, entry_revisions, mutation_requests
 2. `0001_referrers.sql` — aggregated referrers
 3. `0002_article_access.sql` — visibility and legacy members
 4. `0003_media.sql` — media metadata
 5. `0004_hero_media.sql` — per-revision hero fields
-6. `0005_media_deletion_fence.sql` — in-progress R2 deletion claims and D1 triggers that prevent new media references
+6. `0005_media_deletion_fence.sql` — permanent media deletion intents and D1 triggers that prevent references
 
 The `ALTER TABLE` migrations are not meant to be rerun blindly. **Do not reapply migrations, reseed or recreate production D1** as part of documentation or source deployment.
 
@@ -76,3 +80,13 @@ The `ALTER TABLE` migrations are not meant to be rerun blindly. **Do not reapply
 - Reader visibility: [`lib/reader-store.ts`](../lib/reader-store.ts), [`lib/access.ts`](../lib/access.ts)
 - Media: [`lib/media-store.ts`](../lib/media-store.ts), [`lib/media-deletion.ts`](../lib/media-deletion.ts)
 - Product and access policy: [`docs/REQUIREMENTS.md`](REQUIREMENTS.md), [`docs/ARTICLE_ACCESS.md`](ARTICLE_ACCESS.md), [`docs/PUBLIC_ROLLOUT.md`](PUBLIC_ROLLOUT.md)
+
+## Upgrade and failure recovery for 0005
+
+`0005` is additive: it creates an empty table and four triggers, without rewriting or deleting existing content. It must be installed before the new application code; deploying code without it fails closed with a missing-table error. Package all six migrations and use the normal Sites pending-migration path. This PR has not migrated or deployed any hosted Site.
+
+Before a future production rollout, back up D1 and retain its migration ledger. Pause owner mutations and let old workers/in-flight R2 operations drain before migration and code cutover; old code does not honor the new fence. Confirm the `media_deletions` table, four triggers, migration completion and new worker version before resuming writes. Do not use an automatic fallback to old unfenced deletion code.
+
+Apply each migration atomically and record its completion only on success. If migration fails before commit, keep mutations paused, inspect the ledger/schema and retry the pending migration after fixing the cause. If a partially applied schema is observed, stop and reconcile it against the retained backup/DDL; do not blindly rerun DDL or reset storage. Once new deletion intents exist, preserve them through recovery and roll forward. R2 deletes cannot be undone by restoring D1.
+
+Work regressions cover new installation, a populated `0000`–`0004` upgrade, transactional migration failure, D1 batch rollback/`changes()`, and real local R2 bindings via Miniflare/workerd. They do not constitute hosted Sites migration verification. Cloudflare documents [D1 batch transactions](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch) and [R2 consistency](https://developers.cloudflare.com/r2/reference/consistency/).

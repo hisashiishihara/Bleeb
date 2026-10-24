@@ -21,48 +21,34 @@ export async function deleteMedia(
  if(expectedEntryId!==undefined && media.entry_id!==expectedEntryId)
   throw new DiaryError("not_found","Media not found in the selected article",404);
 
- // D1 claim prevents another request publishing the object during R2 deletion.
- // The migration's triggers reject new article revisions referencing the claim.
- const claim=crypto.randomUUID();
+ // Irreversible intent, not an expiring lease. Every retry may only delete
+ // the same immutable R2 key; no failure or timeout can reopen references.
  await db.prepare(
-  "UPDATE media_assets SET deletion_claim=?,deletion_claimed_at=unixepoch('now') "+
-  "WHERE id=? AND (deletion_claim IS NULL OR deletion_claimed_at<unixepoch('now')-900) "+
-  "AND NOT EXISTS (SELECT 1 FROM entries e JOIN entry_revisions r "+
+  "INSERT INTO media_deletions(media_id,entry_id,storage_key,started_at) "+
+  "SELECT id,entry_id,storage_key,unixepoch('now') FROM media_assets "+
+  "WHERE id=? AND NOT EXISTS (SELECT 1 FROM entries e JOIN entry_revisions r "+
   "ON r.entry_id=e.id AND r.revision=e.latest_revision "+
-  "WHERE e.id=media_assets.entry_id AND e.status='published' AND e.published_revision IS NOT NULL "+
-  "AND (instr(r.body_md,'/media/'||media_assets.id)>0 OR r.hero_media_id=media_assets.id))"
- ).bind(claim,mediaId).run();
- const held=await db.prepare("SELECT deletion_claim FROM media_assets WHERE id=?")
-  .bind(mediaId).first<{deletion_claim:string|null}>();
- if(held?.deletion_claim!==claim){
-  const active=await db.prepare(
-   "SELECT r.body_md,r.hero_media_id FROM entries e JOIN entry_revisions r "+
-   "ON r.entry_id=e.id AND r.revision=e.latest_revision "+
-   "WHERE e.id=? AND e.status='published' AND e.published_revision IS NOT NULL"
-  ).bind(media.entry_id).first<{body_md:string;hero_media_id:string|null}>();
-  if(revisionReferencesMedia(active,mediaId))
-   throw new DiaryError("media_in_published_revision",
-    "Remove this file from the published article revision before deleting",409);
-  throw new DiaryError("media_delete_in_progress","Media deletion is already in progress",409);
+  "WHERE e.status='published' AND e.published_revision IS NOT NULL "+
+  "AND (instr(r.body_md,'/media/'||media_assets.id)>0 OR r.hero_media_id=media_assets.id)) "+
+  "ON CONFLICT(media_id) DO NOTHING"
+ ).bind(mediaId).run();
+ const intent=await db.prepare("SELECT storage_key FROM media_deletions WHERE media_id=?")
+  .bind(mediaId).first<{storage_key:string}>();
+ if(!intent){
+  throw new DiaryError("media_in_published_revision",
+   "Remove this file from all published article revisions before deleting",409);
  }
- // R2 cannot participate in a D1 transaction: remove metadata only when
- // the object is confirmed absent. An ambiguous failure retains the claim.
- try{
-  await storage.delete(media.storage_key);
-  if(await storage.head(media.storage_key))
-   throw new DiaryError("media_delete_incomplete","Storage still contains the file",503);
- }catch(error){
-  try{
-   if(await storage.head(media.storage_key))
-    await db.prepare("UPDATE media_assets SET deletion_claim=NULL,deletion_claimed_at=NULL "+
-      "WHERE id=? AND deletion_claim=?").bind(mediaId,claim).run();
-  }catch{}
-  throw error;
- }
- await db.prepare("DELETE FROM media_assets WHERE id=? AND deletion_claim=?")
-  .bind(mediaId,claim).run();
+ if(intent.storage_key!==media.storage_key)
+  throw new DiaryError("media_delete_conflict","Media storage identity changed",409);
+ // A failed/unknown DELETE is not undone by a subsequent HEAD that sees bytes:
+ // the original DELETE may still finish. Keep the fence, including after success.
+ await storage.delete(intent.storage_key);
+ if(await storage.head(intent.storage_key))
+  throw new DiaryError("media_delete_incomplete","Storage still contains the file",503);
+ await db.prepare("DELETE FROM media_assets WHERE id=? AND storage_key=?")
+  .bind(mediaId,intent.storage_key).run();
  const survivor=await db.prepare("SELECT id FROM media_assets WHERE id=?").bind(mediaId).first<{id:string}>();
- if(survivor)throw new DiaryError("media_delete_incomplete","Media metadata cleanup failed; retry later",503);
+ if(survivor)throw new DiaryError("media_delete_incomplete","Media metadata cleanup failed; retry",503);
  return {media_id:mediaId,entry_id:media.entry_id,deleted:true};
 }
 

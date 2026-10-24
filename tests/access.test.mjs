@@ -570,3 +570,19 @@ test("publishing cannot succeed after a newer revision wins the race",async()=>{
   assert.equal(success.revision,2);
  }finally{sqlite.close();}
 });
+
+
+test("a draft with deleted inline and hero media can be repaired in one body edit",async()=>{
+ const {db,sqlite}=fixture();const previous=globalThis.__diaryTestEnv.MEDIA;
+ try{
+  globalThis.__diaryTestEnv.MEDIA={async delete(){},async head(){return null;}};
+  const media="850e8400-e29b-41d4-a716-446655440000";
+  const e=await store.saveDraft(db,{title:"Repair draft",body_md:"![old](/media/"+media+")",request_id:req()});
+  await db.prepare("INSERT INTO media_assets(id,entry_id,storage_key,content_type,byte_size,original_name,created_at) VALUES(?,?,?,'image/png',1,'old.png','now')").bind(media,e.entry_id,'entries/'+e.entry_id+'/'+media).run();
+  await store.setHeroMedia(db,{entry_id:e.entry_id,expected_revision:1,hero_media_id:media,request_id:req()});
+  await store.dispatch(db,'delete_media',{media_id:media,entry_id:e.entry_id});
+  await store.updateEntry(db,{entry_id:e.entry_id,expected_revision:2,title:"Repair draft",body_md:"Reference removed",request_id:req()});
+  const repaired=await store.getEntry(db,{entry_id:e.entry_id});assert.equal(repaired.revision.hero_media_id,null);
+  await store.publishEntry(db,{entry_id:e.entry_id,revision:3,request_id:req()});
+ }finally{sqlite.close();globalThis.__diaryTestEnv.MEDIA=previous;}
+});

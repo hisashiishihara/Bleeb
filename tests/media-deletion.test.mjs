@@ -97,8 +97,8 @@ test("R2 deletion claim blocks a concurrently saved reference",async()=>{
  try{
   const originalDelete=f.r2.delete.bind(f.r2);
   f.r2.delete=async name=>{
-   const claim=f.sqlite.prepare("SELECT deletion_claim FROM media_assets WHERE id=?").get(mediaId);
-   assert.equal(typeof claim.deletion_claim,"string");
+   const claim=f.sqlite.prepare("SELECT media_id FROM media_deletions WHERE media_id=?").get(mediaId);
+   assert.equal(claim.media_id,mediaId);
    assert.throws(()=>{
     f.sqlite.exec("BEGIN");
     try{
@@ -134,11 +134,64 @@ test("publication cannot begin while R2 deletion is in flight",async()=>{
  }finally{f.sqlite.close();}
 });
 
-test("expired interrupted deletion claims can be reclaimed",async()=>{
+test("interrupted deletion intents remain fenced after fifteen minutes",async()=>{
  const f=fixture();
  try{
-  f.sqlite.prepare("UPDATE media_assets SET deletion_claim='abandoned',deletion_claimed_at=unixepoch('now')-1000 WHERE id=?").run(mediaId);
+  f.sqlite.prepare("INSERT INTO media_deletions VALUES(?,?,?,unixepoch('now')-1000)").run(mediaId,entryId,key);
   assert.equal((await deleteMedia(f.db,f.r2,mediaId,entryId)).deleted,true);
   assert.equal(f.sqlite.prepare("SELECT count(*) AS n FROM media_assets").get().n,0);
+ }finally{f.sqlite.close();}
+});
+
+function assertFenced(f){
+ assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM media_deletions WHERE media_id=?').get(mediaId).n,1);
+ assert.throws(()=>f.sqlite.prepare("UPDATE entry_revisions SET body_md=? WHERE entry_id=? AND revision=2").run('![late](/media/'+mediaId+')',entryId),/media_deletion_in_progress/);
+}
+test('unknown R2 outcome never releases the fence even while HEAD still sees bytes',async()=>{
+ const f=fixture();try{
+  // DELETE response is lost; the remote operation may finish after this error.
+  f.r2.delete=async()=>{throw Error('response lost');};
+  await assert.rejects(deleteMedia(f.db,f.r2,mediaId),/response lost/);
+  assert.ok(f.bytes.has(key));assertFenced(f);
+  f.bytes.delete(key); // original DELETE eventually completes
+  assertFenced(f);
+  f.r2.delete=async name=>f.bytes.delete(name);
+  assert.equal((await deleteMedia(f.db,f.r2,mediaId)).deleted,true);
+  assertFenced(f); // completed removal must not allow old references either
+ }finally{f.sqlite.close();}
+});
+test('HEAD communication failure and D1 cleanup failure can both be retried',async()=>{
+ const f=fixture();try{
+  const head=f.r2.head;
+  f.r2.head=async()=>{throw Error('HEAD disconnected');};
+  await assert.rejects(deleteMedia(f.db,f.r2,mediaId),/HEAD disconnected/);
+  assertFenced(f);assert.ok(!f.bytes.has(key));
+  f.r2.head=head;
+  const broken={prepare(sql){if(sql.startsWith('DELETE FROM media_assets'))throw Error('D1 unavailable');return f.db.prepare(sql);}};
+  await assert.rejects(deleteMedia(broken,f.r2,mediaId),/D1 unavailable/);
+  assertFenced(f);
+  assert.equal((await deleteMedia(f.db,f.r2,mediaId)).deleted,true);
+  assertFenced(f);
+ }finally{f.sqlite.close();}
+});
+test('a slow first deletion and a retry after fifteen minutes converge without reopening references',async()=>{
+ const f=fixture();let release;
+ try{
+  let entered;const started=new Promise(r=>entered=r);const pending=new Promise(r=>release=r);
+  let calls=0;
+  f.r2.delete=async name=>{if(++calls===1){entered();await pending;}f.bytes.delete(name);};
+  const first=deleteMedia(f.db,f.r2,mediaId);await started;
+  f.sqlite.prepare("UPDATE media_deletions SET started_at=unixepoch('now')-1000").run();
+  assert.equal((await deleteMedia(f.db,f.r2,mediaId)).deleted,true);
+  assertFenced(f);release();
+  assert.equal((await first).deleted,true);assertFenced(f);
+ }finally{release?.();f.sqlite.close();}
+});
+test('references from another published article also protect the object',async()=>{
+ const f=fixture();try{
+  f.sqlite.prepare("INSERT INTO entries(id,slug,status,visibility,latest_revision,published_revision,created_at,updated_at) VALUES(?,?,'published','public',1,1,'now','now')").run(otherId,'other');
+  f.sqlite.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,tags_json,saved_at) VALUES(?,1,'Other',?,'[]','now')").run(otherId,'![shared](/media/'+mediaId+')');
+  await assert.rejects(deleteMedia(f.db,f.r2,mediaId),e=>e.code==='media_in_published_revision');
+  assert.deepEqual(f.events,[]);
  }finally{f.sqlite.close();}
 });

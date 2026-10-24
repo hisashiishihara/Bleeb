@@ -159,7 +159,10 @@ export async function updateEntry(db: DB, args: unknown) {
   return mutate(db, req, "update_entry", response, [
     db.prepare("UPDATE entries SET latest_revision=?,updated_at=? WHERE id=? AND latest_revision=?").bind(next, now, id, expected),
     db.prepare("INSERT INTO entry_revisions(entry_id,revision,title,body_md,summary,tags_json,saved_at,hero_media_id,hero_alt_text) "+
-      "SELECT ?,?,?,?,?,?,?,hero_media_id,hero_alt_text FROM entry_revisions WHERE entry_id=? AND revision=?")
+      "SELECT ?,?,?,?,?,?,?,"+
+      "CASE WHEN EXISTS (SELECT 1 FROM media_deletions WHERE media_id=hero_media_id) THEN NULL ELSE hero_media_id END,"+
+      "CASE WHEN EXISTS (SELECT 1 FROM media_deletions WHERE media_id=hero_media_id) THEN NULL ELSE hero_alt_text END "+
+      "FROM entry_revisions WHERE entry_id=? AND revision=?")
       .bind(id,next,draft.title,draft.body_md,draft.summary ?? null,JSON.stringify(draft.tags),now,id,expected)
   ]);
 }
@@ -183,8 +186,8 @@ export async function publishEntry(db: DB, args: unknown) {
   const response = { entry_id: id, slug: entry.slug, status: "published", revision: rev, visibility: audience, public_path: "/posts/" + entry.slug };
   return guardedMutation(db,req,"publish_entry",response,
     db.prepare("UPDATE entries SET status='published',visibility=?,published_revision=?,published_at=?,updated_at=? "+
-      "WHERE id=? AND latest_revision=?")
-      .bind(audience,rev,now,now,id,rev),
+      "WHERE id=? AND latest_revision=? AND visibility=?")
+      .bind(audience,rev,now,now,id,rev,entry.visibility),
     "Article changed while publishing; reload the latest revision");
 }
 
@@ -206,8 +209,8 @@ export async function deleteDraft(db: DB, args: unknown) {
   if(entry.latest_revision!==expected)
     throw new DiaryError("stale_revision","Draft changed. Reload before deleting",409);
 
-  const media = await db.prepare("SELECT storage_key FROM media_assets WHERE entry_id=?")
-    .bind(id).all<{storage_key:string}>();
+  const media = await db.prepare("SELECT id FROM media_assets WHERE entry_id=?")
+    .bind(id).all<{id:string}>();
   if(media.results.length) {
     const storage=bucket();
     for(const asset of media.results) {
@@ -218,23 +221,20 @@ export async function deleteDraft(db: DB, args: unknown) {
          current.visibility!=="owner" || current.published_revision!==null)
         throw new DiaryError("stale_revision","Draft changed during deletion",409);
       try {
-        await storage.delete(asset.storage_key);
-        if(await storage.head(asset.storage_key))
-          throw new Error("R2 object remains after delete");
+        await deleteMedia(db,storage,asset.id,id);
       } catch {
         throw new DiaryError("media_delete_failed","Could not remove draft media. No article records were deleted; retry",503);
       }
     }
   }
 
-  const allowed="id=? AND status='draft' AND visibility='owner' AND published_revision IS NULL AND latest_revision=?";
+  const allowed="id=? AND status='draft' AND visibility='owner' AND published_revision IS NULL AND latest_revision=? "+
+    "AND NOT EXISTS (SELECT 1 FROM media_assets WHERE entry_id=entries.id)";
   const response={entry_id:id,status:"deleted",deleted:true,deleted_media:media.results.length};
   // Conditions on *every* table mutation keep a concurrent publish/edit from
   // losing any D1 records. They execute inside D1's atomic batch.
   const statements=[
     db.prepare("DELETE FROM referrer_daily WHERE entry_id=? AND EXISTS (SELECT 1 FROM entries WHERE "+allowed+")")
-      .bind(id,id,expected),
-    db.prepare("DELETE FROM media_assets WHERE entry_id=? AND EXISTS (SELECT 1 FROM entries WHERE "+allowed+")")
       .bind(id,id,expected),
     db.prepare("DELETE FROM entry_revisions WHERE entry_id=? AND EXISTS (SELECT 1 FROM entries WHERE "+allowed+")")
       .bind(id,id,expected),
@@ -300,7 +300,7 @@ async function newHeroRevision(db:DB,input:HeroArgs,action:string,mediaResult?:R
  const heroId=input.hero_media_id;
  if(heroId!==null){
   if(typeof heroId!=="string"||!MEDIA_ID_RE.test(heroId))throw new DiaryError("invalid_media_id","Invalid hero image ID");
-  const asset=await db.prepare("SELECT id FROM media_assets WHERE id=? AND entry_id=? AND content_type LIKE 'image/%' AND deletion_claim IS NULL")
+  const asset=await db.prepare("SELECT id FROM media_assets WHERE id=? AND entry_id=? AND content_type LIKE 'image/%' AND NOT EXISTS (SELECT 1 FROM media_deletions WHERE media_id=media_assets.id)")
    .bind(heroId,id).first<{id:string}>();
   if(!asset)throw new DiaryError("not_found","Hero image must belong to the selected article",404);
  }
