@@ -121,16 +121,15 @@ Bleeb stores articles in D1.[^storage]
 
 ### Images and videos
 
-To display an image at 75% of the article text width, append a quoted
-Markdown image title with `width=75%`:
+To display an image at **75% of the article text width and centered automatically**, append the quoted Markdown image title `"width=75%"`:
 
 ```markdown
 ![Screenshot](/media/your-image-id "width=75%")
 ```
 
-This changes only the image's display width, not the original file in R2.
-Percentages from 1% to 100% are accepted. Images with a width directive are automatically centered, while ordinary images without this option remain unchanged. Images stay within the reading area's width.
+Only integer percentages from `1%` through `100%` are accepted. You do **not** need an HTML `<center>` tag or separate CSS. Width-specified images are centered and remain responsive; images without this title keep their ordinary rendering and normal image titles still act as tooltips. Width directives do not apply to the `video:` image extension or separate cover/hero images.
 
+**Display size only:** this does not resize, recompress, or replace the underlying R2 image. To reduce file size, convert/compress the source image separately.
 
 Upload your image or video through ChatGPT or the owner editor. Then insert the media URL returned by Bleeb:
 

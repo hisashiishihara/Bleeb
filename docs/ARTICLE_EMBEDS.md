@@ -89,16 +89,17 @@ The diagram renderer is loaded lazily in the browser and uses Mermaid's `securit
 
 ## Image display width
 
-An optional Markdown image title can set the display width as a percentage
-of the article's text area:
+Use a quoted Markdown image title to set the image's **display width** relative to the article's text area:
 
 ```markdown
 ![Screenshot](/media/example-image-id "width=75%")
 ```
 
-Supported values are whole percentages from `1%` through `100%`.
-A normal Markdown image without the `"width=...%"` title is unchanged.
-Images with an explicit width are automatically centered in the article. The width is responsive: images do not overflow their container.
-Ordinary image titles remain standard tooltips; arbitrary CSS, pixel widths,
-raw HTML, and width options for the `video:` extension are not supported.
-The image bytes in R2 are not resized or recompressed.
+A valid directive uses an **integer from 1 through 100** followed by `%` (for example, `"width=50%"` or `"width=100%"`). The renderer applies `width: 75%`, `max-width: 100%`, `height: auto`, block display, and automatic inline margins, so the image **centers itself without any additional markup** and does not overflow the container.
+
+- Without a width directive, an image keeps its normal rendering.
+- A normal quoted image title (not a `width=N%` directive) remains a tooltip.
+- Arbitrary CSS, pixel sizes, invalid percentages, raw HTML, and width directives on the `video:` extension are **not** supported.
+- The feature changes **display size only**: no R2 file bytes are resized or recompressed. Cover/hero images are configured separately.
+
+See [Usage](USAGE.md#images-and-videos) for the browser-editor workflow.
