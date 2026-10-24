@@ -12,7 +12,7 @@ Start with the short guides. Bleeb favors **minimal code and minimal documentati
 
 ## Specific topics
 
-- [Article embeds](ARTICLE_EMBEDS.md) — diagrams, charts, tables and rich Markdown.
+- [Article embeds](ARTICLE_EMBEDS.md) — diagrams, charts, tables, and [automatically centered percentage-width images](ARTICLE_EMBEDS.md#image-display-width).
 - [Editor and media](EDITOR_MEDIA.md) · [Media deletion](MEDIA_DELETION.md) · [Remote images](REMOTE_HERO.md).
 - [Article access](ARTICLE_ACCESS.md) · [Site authentication](SITES_AUTH_VALIDATION.md) · [Public rollout](PUBLIC_ROLLOUT.md).
 - [Copy to note](NOTE_EXPORT.md) · [Access and referrers](ACCESS_AND_REFERRERS.md) · [Current public operation](PUBLIC_ROLLOUT.md).

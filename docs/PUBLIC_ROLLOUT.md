@@ -1,6 +1,6 @@
 # Public blog operation and release boundaries
 
-**Current state:** `観測と思考` is an internet-accessible ChatGPT Site at `https://blog.odorikani.net`. As reported after the **2026-10-20 v38 deployment**, public article access, noindex removal for selected public pages, RSS/sitemap, private-route rejection, and data preservation were checked on the live Site. This supersedes the **pre-public-release** instructions from 2026-10-17. GitHub repository visibility is a separate decision.
+**Current state (reported 2026-10-24):** `観測と思考` is an internet-accessible ChatGPT Site at `https://blog.odorikani.net`, updated in place to **v45** (deployment `appgdep_6adc51de6b988191b81f7965e17ef55e`, source `36f66c33ed831b9854a2c030e34820002a8ecbda`). Work reported 112 tests, type-check and build passing; generated HTML for a width-specified draft image was centered. The signed-in browser appearance has not been verified. v43 introduced the additive `0005` D1 migration; v45 added no migration. This supersedes the **pre-public-release** instructions from 2026-10-17. GitHub repository visibility remains a separate decision.
 
 ## Present behavior
 
@@ -13,6 +13,7 @@
 - Public home, public article detail, About and Privacy opt into indexing. Owner-only articles, management pages, archive and tag indexes remain `noindex` under current policy.
 - `/feed.xml`, `/sitemap.xml` and `/robots.txt` are public. They enumerate **only** public published articles regardless of owner login state; the homepage and static pages are also in the sitemap.
 - Referrer counting is opt-in and disabled unless `AI_DIARY_REFERRER_TRACKING_ENABLED=true`.
+- Markdown images with a valid quoted `"width=N%"` title (integer 1–100) are displayed at that percentage of the text width and automatically centered; ordinary image rendering is unchanged. See [Usage](USAGE.md#images-and-videos).
 
 ## Safe updates to the existing Site
 
