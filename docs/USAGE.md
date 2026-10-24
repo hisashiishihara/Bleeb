@@ -121,6 +121,18 @@ Bleeb stores articles in D1.[^storage]
 
 ### Images and videos
 
+To display an image at 75% of the article text width, append a quoted
+Markdown image title with `width=75%`:
+
+```markdown
+![Screenshot](/media/your-image-id "width=75%")
+```
+
+This changes only the image's display width, not the original file in R2.
+Percentages from 1% to 100% are accepted, and ordinary images without this
+option remain unchanged. Images stay within the reading area's width.
+
+
 Upload your image or video through ChatGPT or the owner editor. Then insert the media URL returned by Bleeb:
 
 ```markdown

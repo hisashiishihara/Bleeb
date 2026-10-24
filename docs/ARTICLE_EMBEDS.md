@@ -86,3 +86,19 @@ sequenceDiagram
 ```
 
 The diagram renderer is loaded lazily in the browser and uses Mermaid's `securityLevel: "strict"`. Author-provided HTML and script execution are not enabled. If rendering fails, the original diagram source remains available in a disclosure below the figure. Diagram syntax is a Mermaid subset of UML notation, not a full UML interchange implementation.
+
+## Image display width
+
+An optional Markdown image title can set the display width as a percentage
+of the article's text area:
+
+```markdown
+![Screenshot](/media/example-image-id "width=75%")
+```
+
+Supported values are whole percentages from `1%` through `100%`.
+A normal Markdown image without the `"width=...%"` title is unchanged.
+The width is responsive: images do not overflow their container.
+Ordinary image titles remain standard tooltips; arbitrary CSS, pixel widths,
+raw HTML, and width options for the `video:` extension are not supported.
+The image bytes in R2 are not resized or recompressed.

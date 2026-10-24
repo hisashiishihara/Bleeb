@@ -9,6 +9,7 @@ import {ArticleToc} from "./article-toc";
 import {MermaidDiagram} from "./mermaid-diagram";
 import {ArticleChart,StockEmbed,TweetEmbed,YouTubeEmbed} from "./article-embeds";
 import { MEDIA_ID_RE } from "../../lib/media-rules";
+import { imageWidthPercentage } from "../../lib/image-width";
 
 export function MediaMarkdown({body}:{body:string}){
  return <><ArticleToc body={body}/><ReactMarkdown skipHtml remarkPlugins={[remarkGfm,remarkMath]} rehypePlugins={[rehypeKatex,[rehypeHighlight,{detect:false,plainText:["mermaid","chart","stock","x","youtube"]}],rehypeSlug]} components={{
@@ -25,14 +26,19 @@ export function MediaMarkdown({body}:{body:string}){
    }
    return <pre>{children}</pre>;
   },
-  img:({src,alt})=>{
+  img:({src,alt,title})=>{
    // Video is embedded through a safe Markdown image extension:
    // ![video:説明](/media/uuid). Normal Markdown images remain supported.
    if(alt?.startsWith("video:") && typeof src==="string" && src.startsWith("/media/") &&
       MEDIA_ID_RE.test(src.slice("/media/".length))) {
      return <video controls playsInline preload="metadata" src={src} aria-label={alt.slice(6)||"動画"} style={{maxWidth:"100%",height:"auto"}}/>;
    }
-   return <img src={src} alt={alt||""} loading="lazy"/>;
+   // An optional Markdown image title, e.g. "width=75%", sets only the
+   // rendered image width. Do not accept arbitrary CSS or HTML from Markdown.
+   const width=imageWidthPercentage(title);
+   return <img src={src} alt={alt||""} loading="lazy"
+     title={width===null?title:undefined}
+     style={width===null?undefined:{width:width+"%",maxWidth:"100%",height:"auto"}}/>;
   }
  }}>{body}</ReactMarkdown></>;
 }
