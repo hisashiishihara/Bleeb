@@ -30,6 +30,31 @@ Site-hosted MCP (**12 owner-only tools**) manages draft creation, revision updat
 
 Public discovery endpoints `/feed.xml` (RSS 2.0), `/sitemap.xml` and `/robots.txt` query only public, published articles, **independent of viewer identity**. The public homepage, public article metadata, About and Privacy are indexable; private/owner routes remain noindex. The production canonical host is `https://blog.odorikani.net` (currently set as `SITE_ORIGIN` in `lib/public-discovery.ts`); new installations must change this to their own domain before enabling indexing.
 
+## Proposed optional commerce integration (2026-10-28; not deployed)
+
+The owner selected **Bleeb + merchant-daemon** as the direction for a future commerce workflow. Bleeb provides the ChatGPT Sites hosting shell, authenticated management UI and MCP, and patterns for D1/R2 persistence; [merchant-daemon](https://github.com/hisashiishihara/merchant-daemon) retains a separate canonical commerce model and provider adapters. Reuse minimal common infrastructure, **not** blog article schemas or article publication logic. This proposal does **not** change the current 12 owner-only MCP tools, live Blog, public routes, or production D1/R2.
+
+Suggested planned internal composition:
+```text
+Bleeb existing Site
+  /owner/archive and article MCP       [existing]
+  /owner/commerce and commerce MCP     [proposed optional module]
+                   |
+         merchant-daemon domain ports
+                   |
+     commerce_* D1 records + commerce/ R2 keys
+                   |
+          revision-bound merchant approval
+                   |
+         Shopify outbound API [test only]
+```
+
+**Security/correctness gates:** Keep merchant records separate from `entries`/`entry_revisions` and `media_assets`; blog media bytes/ownership and R2 deletion fences must not accidentally apply to commerce media. Use explicit ledger namespace, migration files and D1/R2 recovery boundaries. Commerce approval is tied to an exact product revision, unlike current Bleeb articles where edits to a published article appear immediately. A stale approval, unbound product target, unidentified merchant or uncertain Shopify result must fail closed. Do not assume an authenticated Bleeb owner session authenticates outside merchants; the first PoC is owner-operated/test-merchant only. Require an approved separate merchant-auth scheme before inviting real sellers. Require test coverage for anonymous access, site identity spoofing, article regression, migration/rollback, object lifecycles, merchant isolation and external API retries.
+
+**Operational gates:** Build on a private staging Site and run relevant existing Bleeb tests/typecheck/build plus new integration tests before suggesting production changes. The existing `blog.odorikani.net` Site and its real D1/R2 data are OUT OF SCOPE for automatic migration or deployment. Shopify dev-store writes and real email webhook/reply processing require distinct authenticated test environments and authorization. No VPS or scraping for the first milestone. If Sites lacks essential ingress, outgoing network or retry capabilities, record the evidence and escalate a narrowly scoped platform decision.
+
+[Merchant-daemon requirements](https://github.com/hisashiishihara/merchant-daemon/issues/1) · [Bleeb roadmap](ROADMAP.md).
+
 ## Reliability and release
 
 Preserve revision history. Export content in portable formats; verify a full import/restore before treating it as disaster recovery. Apply migrations in order and never reset production D1/R2. Test access boundaries, unauthorized requests, XSS, revision conflicts, backups and deployment behavior. A GitHub push does not automatically update the Site.
